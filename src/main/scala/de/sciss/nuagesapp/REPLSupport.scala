@@ -1,4 +1,4 @@
-package de.sciss.smc
+package de.sciss.nuagesapp
 
 import de.sciss.synth.Server
 import de.sciss.nuages.NuagesFrame

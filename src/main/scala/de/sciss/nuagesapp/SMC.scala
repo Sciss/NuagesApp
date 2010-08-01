@@ -1,6 +1,6 @@
 /*
  *  SMC.scala
- *  (Cupola)
+ *  (NuagesApp)
  *
  *  Copyright (c) 2010 Hanns Holger Rutz. All rights reserved.
  *
@@ -26,7 +26,7 @@
  *  Changelog:
  */
 
-package de.sciss.smc
+package de.sciss.nuagesapp
 
 import de.sciss.synth.swing.{NodeTreePanel, ServerStatusPanel}
 import de.sciss.synth.proc.ProcDemiurg
@@ -34,18 +34,18 @@ import collection.breakOut
 import collection.immutable.{ IndexedSeq => IIdxSeq }
 import javax.swing.WindowConstants
 import de.sciss.synth.io.AudioFile
-import java.awt.GraphicsEnvironment
 import de.sciss.nuages.{NuagesConfig, NuagesFrame}
 import de.sciss.synth._
 import de.sciss.freesound.swing.{SearchProgressFrame, SearchResultFrame, SearchQueryFrame, LoginFrame}
 import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
 import actors.DaemonActor
 import java.io.{FilenameFilter, File, RandomAccessFile}
+import java.awt.{EventQueue, GraphicsEnvironment}
 
 /**
  *    @version 0.11, 21-Jul-10
  */
-object SMC {
+object SMC extends Runnable {
    val BASE_PATH           = "/Users/rutz/Desktop/freesound/"
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false

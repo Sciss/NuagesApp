@@ -1,4 +1,4 @@
-package de.sciss.smc
+package de.sciss.nuagesapp
 
 import de.sciss.scalainterpreter.{ LogPane, ScalaInterpreterPane }
 import de.sciss.synth.Server
@@ -231,7 +231,6 @@ import math._
 import de.sciss.synth._
 import de.sciss.synth.ugen._
 import de.sciss.synth.swing._
-import de.sciss.temporal._
 import de.sciss.synth.proc._
 import de.sciss.synth.proc.DSL._
 import support._

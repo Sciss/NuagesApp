@@ -26,7 +26,7 @@
  *  Changelog:
  */
 
-package de.sciss.smc
+package de.sciss.nuagesapp
 
 import de.sciss.synth.{ EnvSeg => S, _ }
 import de.sciss.synth.proc._
