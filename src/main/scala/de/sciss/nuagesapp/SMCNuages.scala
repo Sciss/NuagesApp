@@ -421,18 +421,15 @@ object SMCNuages extends TabletListener {
       }
 */
    
-// XXX THIS CURRENTLY CRASHES SCSYNTH
-/*
       filter( "verb" ) {
-         val pextent = pControl( "size", ParamSpec( 0, 1 ), 0.5 ) // XXX pScalar
+         val pextent = pScalar( "size", ParamSpec( 0, 1 ), 0.5 )
          val pcolor  = pControl( "color", ParamSpec( 0, 1 ), 0.5 )
          val pmix    = pMix
          graph { in =>
-            val extent     = pextent.kr
+            val extent     = pextent.ir
             val color	   = Lag.kr( pcolor.kr, 0.1 )
-            val i_trig     = Impulse.kr( 0 )
-            val i_roomSize	= Latch.kr( LinExp.kr( extent, 0, 1, 1, 100 ), i_trig ) // XXX bit stupid
-            val i_revTime  = Latch.kr( LinExp.kr( extent, 0, 1, 0.3, 20 ), i_trig )
+            val i_roomSize	= LinExp.ir( extent, 0, 1, 1, 100 )
+            val i_revTime  = LinExp.ir( extent, 0, 1, 0.3, 20 )
             val spread	   = 15
             val numChannels= in.numOutputs
             val ins        = in.outputs
@@ -445,7 +442,6 @@ object SMCNuages extends TabletListener {
             mix( in, flt, pmix )
          }
       }
-*/
 
       filter( "zero" ) {
          val pwidth	= pAudio( "width", ParamSpec( 0, 1 ), 0.5 )
