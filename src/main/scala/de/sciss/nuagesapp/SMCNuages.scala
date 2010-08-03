@@ -39,7 +39,7 @@ import ugen._
 import java.io.File
 
 /**
- *    @version 0.11, 19-Jul-10
+ *    @version 0.11, 02-Aug-10
  */
 object SMCNuages extends TabletListener {
    import DSL._
@@ -339,8 +339,6 @@ object SMCNuages extends TabletListener {
          }
       }
 
-// XXX currently crashes scsynth
-/*
       filter( "m-above" ) {
          val pthresh = pControl( "thresh", ParamSpec( 1.0e-3, 1.0e-1, ExpWarp ), 1.0e-2 )
          val pmix = pMix
@@ -359,10 +357,10 @@ object SMCNuages extends TabletListener {
             val env2          = Env( 0.0, List( S( BufDur.kr( bufIDs ) * 2, 0.0, stepShape ), S( 0.2, 1, linShape )))
             val wet			   = EnvGen.kr( env2 )
             val sig			   = (in * (1 - wet).sqrt) + (flt * wet)
-            mix( in, flt, pmix )
+            mix( in, sig, pmix )
          }
       }
-*/
+
       filter( "pitch" ) {
          val ptrans  = pControl( "shift", ParamSpec( 0.125, 4, ExpWarp ), 1 )
          val ptime   = pControl( "time",  ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
