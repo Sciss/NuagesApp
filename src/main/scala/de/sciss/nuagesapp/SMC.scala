@@ -76,7 +76,7 @@ object SMC extends Runnable {
       GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
 
    @volatile var s: Server       = _
-   @volatile var booting: BootingServer = _
+   @volatile var booting: ServerConnection = _
    @volatile var config: NuagesConfig = _
 
    val support = new REPLSupport
@@ -96,13 +96,12 @@ object SMC extends Runnable {
       ntpw.setVisible( true )
       sif.setLocation( sspw.getX + sspw.getWidth + 32, sif.getY )
       sif.setVisible( true )
-      booting = Server.boot( options = options )
-      booting.addListener {
-         case BootingServer.Preparing( srv ) => {
+      booting = Server.boot( options = options ) {
+         case ServerConnection.Preparing( srv ) => {
             ssp.server = Some( srv )
             ntp.server = Some( srv )
          }
-         case BootingServer.Running( srv ) => {
+         case ServerConnection.Running( srv ) => {
             ProcDemiurg.addServer( srv )
             s = srv
             support.s = srv
@@ -118,7 +117,7 @@ object SMC extends Runnable {
          }
       }
       Runtime.getRuntime().addShutdownHook( new Thread { override def run = shutDown })
-      booting.start
+//      booting.start
    }
 
    private def initNuages {
