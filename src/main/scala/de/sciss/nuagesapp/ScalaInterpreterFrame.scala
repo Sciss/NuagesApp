@@ -32,18 +32,26 @@ extends JFrame( "Scala Interpreter" ) {
 """// Press '""" + KeyEvent.getKeyModifiersText( txnKeyStroke.getModifiers() ) + " + " +
       KeyEvent.getKeyText( txnKeyStroke.getKeyCode() ) + """' to execute transactionally.
 
-gen( "test" ) {
+val pBub = gen( "bubbles2" ) {
+   val f1  = pAudio( "f1", ParamSpec( 0.1f, 10, ExpWarp ), 0.4f )
+   val f2  = pAudio( "f2", ParamSpec( 0.1f, 100, ExpWarp ), 8 )
+   val det = pAudio( "det", ParamSpec( 0.1f, 10, ExpWarp ), 0.90375f )
    graph {
-      val in = In.ar( NumOutputBuses.ir, 2 )
-      val fft = FFT( bufEmpty( 1024 ).id, Mix( in ))
-      val spec = SpecPcile.kr( fft )
-      val smooth = Lag.kr( spec, 10 )
-      smooth.react( 2 ) { data =>
-         val Seq( freq ) = data
-         println( "GOT: " + freq )
-      }
-      in
+      val freq2 = f2.ar
+      val f = LFSaw.ar( f1.ar ).madd(24, LFSaw.ar(List( freq2, freq2 * det.ar))
+         .madd(3, 80)).midicps
+      CombN.ar(SinOsc.ar(f)*0.04, 0.2, 0.2, 4)
    }
+}
+
+val g3 = diff( "Pan" ) {
+    val pfreq = pControl( "freq", ParamSpec( 0.1, 20000, ExpWarp ), 1 )
+    val pamp  = pControl( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
+    val pout  = pAudioOut( "out", Some( RichBus.soundOut( s, 2 )))
+
+    graph { in =>
+        pout.ar( Pan2.ar( Mix( in ) * pamp.kr, SinOsc.ar( pfreq.kr )))
+    }
 }
 
 val f = new de.sciss.nuages.NuagesFrame( s )
