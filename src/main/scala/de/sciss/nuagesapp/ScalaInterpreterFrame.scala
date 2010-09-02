@@ -32,6 +32,20 @@ extends JFrame( "Scala Interpreter" ) {
 """// Press '""" + KeyEvent.getKeyModifiersText( txnKeyStroke.getModifiers() ) + " + " +
       KeyEvent.getKeyText( txnKeyStroke.getKeyCode() ) + """' to execute transactionally.
 
+gen( "test" ) {
+   graph {
+      val in = In.ar( NumOutputBuses.ir, 2 )
+      val fft = FFT( bufEmpty( 1024 ).id, Mix( in ))
+      val spec = SpecPcile.kr( fft )
+      val smooth = Lag.kr( spec, 10 )
+      smooth.react( 2 ) { data =>
+         val Seq( freq ) = data
+         println( "GOT: " + freq )
+      }
+      in
+   }
+}
+
 val f = new de.sciss.nuages.NuagesFrame( s )
 f.setSize( 640, 480 )
 f.setVisible( true )
