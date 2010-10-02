@@ -47,12 +47,14 @@ import java.awt.{EventQueue, GraphicsEnvironment}
  */
 object SMC extends Runnable {
    val BASE_PATH           = "/Users/rutz/Desktop/freesound/"
+   val TAPES_PATH          = "/Users/rutz/Desktop/Dissemination/audio_work"
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
    val INTERNAL_AUDIO      = false
    val MASTER_NUMCHANNELS  = 8 // 4
    val MASTER_OFFSET       = 0
    val MIC_OFFSET          = 0
+   val FREESOUND           = false
    val FREESOUND_OFFLINE   = true
    var masterBus : AudioBus = null
 
@@ -110,10 +112,14 @@ object SMC extends Runnable {
             initNuages
 
             // freesound
-            val cred  = new RandomAccessFile( BASE_PATH + "cred.txt", "r" )
-            val credL = cred.readLine().split( ":" )
-            cred.close()
-            initFreesound( credL( 0 ), credL( 1 ))
+            if( FREESOUND ) {
+               val cred  = new RandomAccessFile( BASE_PATH + "cred.txt", "r" )
+               val credL = cred.readLine().split( ":" )
+               cred.close()
+               initFreesound( credL( 0 ), credL( 1 ))
+            } else {
+               newTapesFrame
+            }
          }
       }
       Runtime.getRuntime().addShutdownHook( new Thread { override def run = shutDown })
@@ -135,6 +141,20 @@ object SMC extends Runnable {
       f.setVisible( true )
       support.nuages = f
       SMCNuages.init( s, f )
+   }
+
+   private def newTapesFrame {
+      val srf = TapesFrame.fromFolder( new File( TAPES_PATH ))
+      srf.setLocationRelativeTo( null )
+      srf.setVisible( true )
+      var checked = Set.empty[ String ]
+      srf.addListener {
+         case TapesFrame.SelectionChanged( sel @ _* ) => {
+            val pathO = sel.headOption.map( _.file.getAbsolutePath() ) 
+println( "FS PATH = " + pathO )
+            SMCNuages.freesoundFile = pathO
+         }
+      }
    }
 
    private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],
