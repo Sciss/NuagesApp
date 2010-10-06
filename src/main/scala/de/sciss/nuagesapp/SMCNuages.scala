@@ -37,14 +37,15 @@ import java.awt.event.MouseEvent
 import collection.breakOut
 import ugen._
 import java.io.File
+import SMC._
 
 /**
- *    @version 0.11, 02-Aug-10
+ *    @version 0.11, 02-Oct-10
  */
 object SMCNuages extends TabletListener {
    import DSL._
 
-   val USE_TABLET       = true
+   val USE_TABLET       = false
    val DEBUG_PROXIMITY  = false
    val NUM_LOOPS        = 7
    val LOOP_DUR         = 30
@@ -60,18 +61,21 @@ object SMCNuages extends TabletListener {
       val loopBufs   = Array.fill[ Buffer ]( NUM_LOOPS )( Buffer.alloc( s, loopFrames, 2 ))
       val loopBufIDs: Seq[ Int ] = loopBufs.map( _.id )( breakOut )
 
-      gen( "free" ) {
+      gen( if( FREESOUND ) "free" else "tape" ) {
          val pspeed  = pAudio( "speed", ParamSpec( 0.1f, 10, ExpWarp ), 1 )
          val ploop   = pControl( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
+         val ppos    = pScalar( "pos", ParamSpec( 0, 1 ), 0 )
           graph {
-             val b       = bufCue( freesoundFile.getOrElse( error( "No freesound file selected" )))
+             val path   = freesoundFile.getOrElse( error( "No audiofile selected" ))
+             val spec   = audioFileSpec( path )
+             val b      = bufCue( path, startFrame = (ppos.v * spec.numFrames).toLong )
              val numCh  = b.numChannels
              val sig    = VDiskIn.ar( numCh, b.id, pspeed.ar * BufRateScale.ir( b.id ), loop = ploop.kr ).outputs.take(2)
              if( numCh == 1 ) List( sig( 0 ), sig( 0 )) else sig
           }
       }
 
-      new File( SMC.BASE_PATH + "sciss" ).listFiles().filter( _.getName.endsWith( ".aif" )).foreach( f => {
+      new File( BASE_PATH + fs + "sciss" ).listFiles().filter( _.getName.endsWith( ".aif" )).foreach( f => {
          val name0   = f.getName
          val i       = name0.indexOf( '.' )
          val name    = if( i >= 0 ) name0.substring( 0, i ) else name0
@@ -153,6 +157,73 @@ object SMCNuages extends TabletListener {
             val feed       = pfeed.ar * 2 - 1
             XFade2.ar( pureIn, dly, feed )
          }
+      }
+
+      gen( "ludger" ) {
+         val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
+
+         graph {
+            val off        = SMC.LUDGER_OFFSET // if( SMC.INTERNAL_AUDIO ) 0 else SMC.MIC_OFFSET
+            val boost      = pboost.ar
+            val pureIn	   = In.ar( NumOutputBuses.ir + off, 1 ) * boost
+            val st: GE = pureIn :: pureIn :: Nil
+            st
+         }
+      }
+
+      gen( "robert" ) {
+          val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
+         
+          graph {
+             val off        = SMC.ROBERT_OFFSET // if( SMC.INTERNAL_AUDIO ) 0 else SMC.MIC_OFFSET
+             val boost      = pboost.ar
+             val pureIn	   = In.ar( NumOutputBuses.ir + off, 2 ) * boost
+//             val st: GE = pureIn :: pureIn :: Nil
+//             st
+             pureIn
+          }
+       }
+
+      gen( "~dust" ) {
+         val pfreq  = pAudio( "freq",  ParamSpec( 0.01, 1000, ExpWarp ), 0.1 /* 1 */)
+         val pdecay = pAudio( "decay", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
+
+          graph {
+             val freq = pfreq.ar
+             Decay.ar( Dust.ar( freq :: freq :: Nil ), pdecay.ar ) 
+          }
+      }
+
+      gen( "~gray" ) {
+          graph {
+             GrayNoise.ar( 1 :: 1 :: Nil )
+          }
+      }
+
+      gen( "~sin" ) {
+         val pfreq1 = pAudio( "freq", ParamSpec( 0.1, 10000, ExpWarp ), 15 /* 1 */)
+         val pfreq2 = pAudio( "freq-fact", ParamSpec( 0.01, 100, ExpWarp ), 1 /* 1 */)
+
+          graph {
+             val f1 = pfreq1.ar
+             val f2 = f1 * pfreq2.ar
+             SinOsc.ar( f1 :: f2 :: Nil )                                                                                                    
+          }
+      }
+
+      gen( "~pulse" ) {
+         val pfreq1 = pAudio( "freq", ParamSpec( 0.1, 10000, ExpWarp ), 15 /* 1 */)
+         val pfreq2 = pAudio( "freq-fact", ParamSpec( 0.01, 100, ExpWarp ), 1 /* 1 */)
+         val pw1 = pAudio( "width1", ParamSpec( 0.0, 1.0 ), 0.5 )
+         val pw2 = pAudio( "width2", ParamSpec( 0.0, 1.0 ), 0.5 )
+
+          graph {
+             val f1 = pfreq1.ar
+             val f2 = f1 * pfreq2.ar
+             val w1 = pw1.ar
+             val w2 = pw2.ar
+             Pulse.ar( f1 :: f2 :: Nil, w1 :: w2 :: Nil )
+          }
       }
 
       gen( "sum_rec" ) {
@@ -313,6 +384,16 @@ object SMCNuages extends TabletListener {
       	}
       }
 
+      filter( "*" ) {
+         val pmix = pMix
+         val bin2  = pAudioIn( "in2" )
+         graph { in =>
+            val in2  = bin2.ar
+            val flt  = in * in2
+            mix( in, flt, pmix )
+         }
+      }
+
       filter( "gain" ) {
          val pgain   = pAudio( "gain", ParamSpec( -30, 30 ), 0 )
          val pmix = pMix
@@ -471,6 +552,13 @@ object SMCNuages extends TabletListener {
              val outChannels  = SMC.MASTER_NUMCHANNELS
              val sig1         = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
              pout.ar( sig1 )
+          }
+      }
+
+      diff( "O-mute" ) {
+          graph { in =>
+             val gagaism: GE = 0
+             gagaism
           }
       }
 

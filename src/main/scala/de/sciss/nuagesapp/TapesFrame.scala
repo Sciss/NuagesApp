@@ -130,7 +130,7 @@ with Model {
 //         columnR( "Download", 64, 64, _.download, Some( DownloadRenderer ), Some( DownloadComparator ))
 //      } else UnknownColumn
       
-      val COL_NAME   = column( "Name", 96, 192, _.file.getName )
+      val COL_NAME   = column( "Name", 96, 384, _.file.getName )
       val COL_FORM   = column( "Form", 36, 36, _.spec.fileType )
       val COL_CHAN   = column( "Ch", 24, 24, _.spec.numChannels, Some( RightAlignedRenderer ), Some( IntComparator ))
       val COL_BITS   = column( "Bit", 24, 24, _.spec.sampleFormat.bitsPerSample, Some( RightAlignedRenderer ), Some( IntComparator ))

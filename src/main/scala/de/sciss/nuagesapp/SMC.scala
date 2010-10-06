@@ -43,17 +43,20 @@ import java.io.{FilenameFilter, File, RandomAccessFile}
 import java.awt.{EventQueue, GraphicsEnvironment}
 
 /**
- *    @version 0.11, 21-Jul-10
+ *    @version 0.12, 02-Oct-10
  */
 object SMC extends Runnable {
-   val BASE_PATH           = "/Users/rutz/Desktop/freesound/"
-   val TAPES_PATH          = "/Users/rutz/Desktop/Dissemination/audio_work"
+   val fs                  = File.separator
+   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "Leipzig"
+   val TAPES_PATH          = BASE_PATH + fs + "tapes"
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
    val INTERNAL_AUDIO      = false
-   val MASTER_NUMCHANNELS  = 8 // 4
+   val MASTER_NUMCHANNELS  = 4
    val MASTER_OFFSET       = 0
    val MIC_OFFSET          = 0
+   val LUDGER_OFFSET       = 2
+   val ROBERT_OFFSET       = 4
    val FREESOUND           = false
    val FREESOUND_OFFLINE   = true
    var masterBus : AudioBus = null
@@ -65,8 +68,8 @@ object SMC extends Runnable {
       } else {
          o.deviceName         = Some( "MOTU 828mk2" )
       }
-      o.inputBusChannels   = 10
-      o.outputBusChannels  = 10
+      o.inputBusChannels   = 22 // 10
+      o.outputBusChannels  = 22 // 10
       o.audioBusChannels   = 512
       o.loadSynthDefs      = false
       o.memorySize         = 65536
@@ -91,17 +94,17 @@ object SMC extends Runnable {
       val sif  = new ScalaInterpreterFrame( support /* ntp */ )
       val ssp  = new ServerStatusPanel()
       val sspw = ssp.makeWindow
-      val ntp  = new NodeTreePanel()
-      val ntpw = ntp.makeWindow
-      ntpw.setLocation( sspw.getX, sspw.getY + sspw.getHeight + 32 )
+//      val ntp  = new NodeTreePanel()
+//      val ntpw = ntp.makeWindow
+//      ntpw.setLocation( sspw.getX, sspw.getY + sspw.getHeight + 32 )
       sspw.setVisible( true )
-      ntpw.setVisible( true )
+//      ntpw.setVisible( true )
       sif.setLocation( sspw.getX + sspw.getWidth + 32, sif.getY )
       sif.setVisible( true )
       booting = Server.boot( options = options ) {
          case ServerConnection.Preparing( srv ) => {
             ssp.server = Some( srv )
-            ntp.server = Some( srv )
+//            ntp.server = Some( srv )
          }
          case ServerConnection.Running( srv ) => {
             ProcDemiurg.addServer( srv )
@@ -113,7 +116,7 @@ object SMC extends Runnable {
 
             // freesound
             if( FREESOUND ) {
-               val cred  = new RandomAccessFile( BASE_PATH + "cred.txt", "r" )
+               val cred  = new RandomAccessFile( BASE_PATH + fs + "cred.txt", "r" )
                val credL = cred.readLine().split( ":" )
                cred.close()
                initFreesound( credL( 0 ), credL( 1 ))
@@ -133,7 +136,7 @@ object SMC extends Runnable {
          new AudioBus( s, MASTER_OFFSET, MASTER_NUMCHANNELS )
       }
       val soloBus    = Bus.audio( s, 2 )
-      val recordPath = BASE_PATH + "rec"
+      val recordPath = BASE_PATH + fs + "rec"
       config         = NuagesConfig( s, Some( masterBus ), Some( soloBus ), Some( recordPath ))
       val f          = new NuagesFrame( config )
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
@@ -185,9 +188,9 @@ println( "FS PATH = " + pathO )
    }
 
    private def initFreesound( username: String, password: String ) {
-      val icachePath = BASE_PATH + "infos"
+      val icachePath = BASE_PATH + fs + "infos"
       val icache = Some( SampleInfoCache.persistent( icachePath ))
-      val downloadPath = Some( BASE_PATH + "samples" )
+      val downloadPath = Some( BASE_PATH + fs + "samples" )
       val f = new LoginFrame()
 
       f.setDefaultCloseOperation( WindowConstants.EXIT_ON_CLOSE )
