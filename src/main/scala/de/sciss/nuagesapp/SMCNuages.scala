@@ -75,7 +75,8 @@ object SMCNuages extends TabletListener {
           }
       }
 
-      new File( BASE_PATH + fs + "sciss" ).listFiles().filter( _.getName.endsWith( ".aif" )).foreach( f => {
+      val audioFiles = new File( BASE_PATH + fs + "sciss" ).listFiles()
+      if( audioFiles != null ) audioFiles.filter( _.getName.endsWith( ".aif" )).foreach( f => {
          val name0   = f.getName
          val i       = name0.indexOf( '.' )
          val name    = if( i >= 0 ) name0.substring( 0, i ) else name0

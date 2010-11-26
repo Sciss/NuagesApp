@@ -91,16 +91,22 @@ object SMC extends Runnable {
       // --> http://scala-programming-language.1934581.n4.nabble.com/Scala-Actors-Starvation-td2281657.html
       System.setProperty( "actors.enableForkJoin", "false" )
 
-      val sif  = new ScalaInterpreterFrame( support /* ntp */ )
-      val ssp  = new ServerStatusPanel()
-      val sspw = ssp.makeWindow
+//      val sif  = new ScalaInterpreterFrame( support /* ntp */ )
+      val ssp  = new ServerStatusPanel( ServerStatusPanel.COUNTS )
+      val sspw = ssp.makeWindow( undecorated = true )
+//      sspw.pack()
+
+      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - sspw.getHeight()
+      sspw.setLocation( SCREEN_BOUNDS.x, maxY )
+
 //      val ntp  = new NodeTreePanel()
 //      val ntpw = ntp.makeWindow
 //      ntpw.setLocation( sspw.getX, sspw.getY + sspw.getHeight + 32 )
       sspw.setVisible( true )
 //      ntpw.setVisible( true )
-      sif.setLocation( sspw.getX + sspw.getWidth + 32, sif.getY )
-      sif.setVisible( true )
+
+//      sif.setLocation( sspw.getX + sspw.getWidth + 32, sif.getY )
+//      sif.setVisible( true )
       booting = Server.boot( options = options ) {
          case ServerConnection.Preparing( srv ) => {
             ssp.server = Some( srv )
@@ -112,7 +118,7 @@ object SMC extends Runnable {
             support.s = srv
 
             // nuages
-            initNuages
+            initNuages( maxY )
 
             // freesound
             if( FREESOUND ) {
@@ -129,7 +135,7 @@ object SMC extends Runnable {
 //      booting.start
    }
 
-   private def initNuages {
+   private def initNuages( maxY: Int ) {
       masterBus  = if( INTERNAL_AUDIO ) {
          new AudioBus( s, 0, 2 )
       } else {
@@ -140,7 +146,8 @@ object SMC extends Runnable {
       config         = NuagesConfig( s, Some( masterBus ), Some( soloBus ), Some( recordPath ))
       val f          = new NuagesFrame( config )
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
-      f.setSize( 640, 480 )
+      f.setBounds( SCREEN_BOUNDS.x, SCREEN_BOUNDS.y, SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 64, maxY - SCREEN_BOUNDS.y )
+      f.setUndecorated( true )
       f.setVisible( true )
       support.nuages = f
       SMCNuages.init( s, f )

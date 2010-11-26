@@ -6,7 +6,7 @@ import sbt.{ FileUtilities => FU, _}
  *    @version 0.12, 21-Jul-10
  */
 class NuagesAppProject( info: ProjectInfo ) extends ProguardProject( info ) {
-   val wolkenpumpe         = "de.sciss" %% "wolkenpumpe" % "0.20"
+   val wolkenpumpe         = "de.sciss" %% "wolkenpumpe" % "0.21"
    val scalaFreesound      = "de.sciss" %% "scalafreesound" % "0.10"
    val scalaFreesoundSwing = "de.sciss" %% "scalafreesoundswing" % "0.11"
    val tabletWrapper       = "tabletwrapper" % "tabletwrapper" % "0.12" from "http://github.com/downloads/Sciss/JNITablet/tabletwrapper-0.12.jar"

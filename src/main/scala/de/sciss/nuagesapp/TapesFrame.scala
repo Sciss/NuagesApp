@@ -92,10 +92,11 @@ object TapesFrame {
    case class TapeInfo( file: File, spec: AudioFileSpec )
 
    def fromFolder( folder: File, title: String = "Tapes", sizeVariant: String = "small" ) = {
-      val infos: IIdxSeq[ TapeInfo ] = folder.listFiles().collect({
+      val files = folder.listFiles()
+      val infos: IIdxSeq[ TapeInfo ] = if( files != null ) files.collect({
          case x if( x.isFile && (try { AudioFile.identify( x ).isDefined } catch { case e => false })) =>
             TapeInfo( x, AudioFile.readSpec( x ))
-      })( breakOut )
+      })( breakOut ) else IIdxSeq.empty
       new TapesFrame( infos, title, sizeVariant )
    }
 }
