@@ -57,6 +57,7 @@ object SMC extends Runnable {
    val MIC_OFFSET          = 0
    val LUDGER_OFFSET       = 2
    val ROBERT_OFFSET       = 4
+   val METERS              = true
    val FREESOUND           = false
    val FREESOUND_OFFLINE   = true
    var masterBus : AudioBus = null
@@ -143,7 +144,7 @@ object SMC extends Runnable {
       }
       val soloBus    = Bus.audio( s, 2 )
       val recordPath = BASE_PATH + fs + "rec"
-      config         = NuagesConfig( s, Some( masterBus ), Some( soloBus ), Some( recordPath ))
+      config         = NuagesConfig( s, Some( masterBus ), Some( soloBus ), Some( recordPath ), true )
       val f          = new NuagesFrame( config )
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
       val y0 = SCREEN_BOUNDS.y + 22
