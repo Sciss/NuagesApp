@@ -47,7 +47,7 @@ import java.awt.{EventQueue, GraphicsEnvironment}
  */
 object SMC extends Runnable {
    val fs                  = File.separator
-   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "Leipzig"
+   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "CafeConcrete"
    val TAPES_PATH          = BASE_PATH + fs + "tapes"
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
@@ -96,8 +96,8 @@ object SMC extends Runnable {
       val sspw = ssp.makeWindow( undecorated = true )
 //      sspw.pack()
 
-      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - sspw.getHeight()
-      sspw.setLocation( SCREEN_BOUNDS.x, maxY )
+      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - sspw.getHeight() + 3
+      sspw.setLocation( SCREEN_BOUNDS.x - 3, maxY - 1 )
 
 //      val ntp  = new NodeTreePanel()
 //      val ntpw = ntp.makeWindow
@@ -146,7 +146,8 @@ object SMC extends Runnable {
       config         = NuagesConfig( s, Some( masterBus ), Some( soloBus ), Some( recordPath ))
       val f          = new NuagesFrame( config )
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
-      f.setBounds( SCREEN_BOUNDS.x, SCREEN_BOUNDS.y, SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 64, maxY - SCREEN_BOUNDS.y )
+      val y0 = SCREEN_BOUNDS.y + 22
+      f.setBounds( SCREEN_BOUNDS.x, y0, SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 64, maxY - y0 )
       f.setUndecorated( true )
       f.setVisible( true )
       support.nuages = f
