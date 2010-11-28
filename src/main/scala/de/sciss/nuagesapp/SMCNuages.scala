@@ -34,10 +34,12 @@ import com.jhlabs.jnitablet.{TabletProximityEvent, TabletEvent, TabletListener, 
 import java.util.TimerTask
 import java.awt.event.MouseEvent
 import collection.breakOut
+import osc.OSCResponder
 import ugen._
 import java.io.File
 import SMC._
-import de.sciss.nuages.{NuagesFrame}
+import de.sciss.nuages.{NuagesPanel, NuagesFrame}
+import de.sciss.osc.OSCMessage
 
 /**
  *    @version 0.11, 02-Oct-10
@@ -48,6 +50,7 @@ object SMCNuages extends TabletListener {
 
    var freesoundFile : Option[ String ] = None
    var f : NuagesFrame = null
+   var synPostM : Synth = null
 
    def init( s: Server, f: NuagesFrame ) = ProcTxn.atomic { implicit tx =>
       // -------------- GENERATORS --------------
@@ -163,8 +166,9 @@ object SMCNuages extends TabletListener {
          graph {
             val off        = LUDGER_OFFSET // if( SMC.INTERNAL_AUDIO ) 0 else SMC.MIC_OFFSET
             val boost      = pboost.ar
-            val pureIn	   = In.ar( NumOutputBuses.ir + off, 1 ) * boost
-            val st: GE = pureIn :: pureIn :: Nil
+            val pureIn	   = In.ar( NumOutputBuses.ir + off, LUDGER_NUMCHANNELS ) * boost
+//            val st: GE = pureIn :: pureIn :: Nil
+            val st = List.tabulate( 2 )( ch => pureIn \ (ch % pureIn.numOutputs) )
             st
          }
       }
@@ -630,6 +634,19 @@ object SMCNuages extends TabletListener {
              pout.ar( outSig )
           }
       }
+
+      val dfPostM = SynthDef( "post-master" ) {
+         val sig = In.ar( masterBus.index, masterBus.numChannels )
+         // externer recorder
+         REC_COPY.foreach( Out.ar( _, sig ))
+         // master meters
+         val meterTr = Impulse.kr( 20 )
+         //val trigA   = Trig1.ar( meterTr, SampleDur.ir )
+         val peak    = Peak.kr( sig, meterTr )
+         val rms     = A2K.kr( Lag.ar( sig.squared, 0.1 ))
+         SendReply.kr( meterTr, (peak.outputs zip rms.outputs).flatMap( tup => tup._1 :: tup._2 :: Nil ), "/meters" )
+      }
+      synPostM = dfPostM.play( s, addAction = addToTail )
 
       // tablet
       this.f = f

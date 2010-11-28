@@ -1,0 +1,108 @@
+package de.sciss.nuagesapp
+
+import java.awt.event.{ComponentEvent, ComponentAdapter, WindowAdapter, ActionListener, ActionEvent}
+import de.sciss.gui.{PeakMeterPanel, PeakMeter, PeakMeterGroup}
+import SMC._
+import de.sciss.scalainterpreter.LogPane
+import java.awt.{Font, Color, BorderLayout}
+import javax.swing.{JLabel, WindowConstants, SwingConstants, Box, JToggleButton, BoxLayout, JFrame, JButton, JPanel}
+import java.io.PrintStream
+
+class ControlPanel( tapesFrame: JFrame ) extends JPanel {
+   panel =>
+
+   private val meterPanel = new PeakMeterPanel()
+   private var interpreter : Option[ ScalaInterpreterFrame ] = None
+
+   {
+      panel.setLayout( new BoxLayout( panel, BoxLayout.X_AXIS ))
+
+      val ggTapes = new JToggleButton( "Tapes" )
+      ggTapes.putClientProperty( "JButton.buttonType", "bevel" )
+      ggTapes.putClientProperty( "JComponent.sizeVariant", "small" )
+      ggTapes.setFocusable( false )
+      ggTapes.addActionListener( new ActionListener {
+         def actionPerformed( e: ActionEvent ) {
+            val sel = ggTapes.isSelected()
+            tapesFrame.setVisible( sel )
+            if( sel ) tapesFrame.toFront()
+         }
+      })
+      tapesFrame.addComponentListener( new ComponentAdapter {
+         override def componentHidden( e: ComponentEvent ) {
+            ggTapes.setSelected( false )
+         }
+      })
+
+//      panel.add( Box.createHorizontalStrut( 4 ))
+      panel.add( ggTapes )
+      panel.add( Box.createHorizontalStrut( 4 ))
+
+//      val m1 = new PeakMeter( SwingConstants.HORIZONTAL )
+//      val m2 = new PeakMeter( SwingConstants.HORIZONTAL )
+//      val mg = new PeakMeterGroup( Array( m1, m2 ))
+//      panel.add( m1 )
+//      panel.add( m2 )
+      meterPanel.setOrientation( SwingConstants.HORIZONTAL )
+      meterPanel.setNumChannels( MASTER_NUMCHANNELS )
+      meterPanel.setBorder( true )
+      val d = meterPanel.getPreferredSize()
+      val dn = 30 / MASTER_NUMCHANNELS 
+      d.height = MASTER_NUMCHANNELS * dn + 7
+      meterPanel.setPreferredSize( d )
+      meterPanel.setMaximumSize( d )
+      panel.add( meterPanel )
+
+      val d1 = logPane.getPreferredSize()
+      d1.height = d.height
+      logPane.setPreferredSize( d1 )
+      panel.add( Box.createHorizontalStrut( 8 ))
+      panel.add( logPane )
+      panel.add( Box.createHorizontalStrut( 16 ))
+
+      val glue = Box.createHorizontalGlue()
+//      glue.setBackground( Color.darkGray )
+      panel.add( glue )
+
+      val ggInterp = new JToggleButton( "REPL" )
+      ggInterp.putClientProperty( "JButton.buttonType", "bevel" )
+      ggInterp.putClientProperty( "JComponent.sizeVariant", "small" )
+      ggInterp.setFocusable( false )
+      ggInterp.addActionListener( new ActionListener {
+         def actionPerformed( e: ActionEvent ) {
+            val sel = ggInterp.isSelected()
+            if( sel ) {
+               val f = interpreter.getOrElse {
+                  val res = new ScalaInterpreterFrame( support /* ntp */ )
+                  interpreter = Some( res )
+                  res.setAlwaysOnTop( true )
+                  res.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
+                  res.addComponentListener( new ComponentAdapter {
+                     override def componentHidden( e: ComponentEvent ) {
+                        ggInterp.setSelected( false )
+                     }
+                  })
+                  res
+               }
+               f.setVisible( true )
+            } else interpreter.foreach( _.setVisible( false ))
+         }
+      })
+      panel.add( ggInterp )
+   }
+
+   def makeWindow : JFrame = makeWindow()
+   def makeWindow( undecorated: Boolean = true ) : JFrame = {
+      val f = new JFrame( "Nuages Controls" )
+      if( undecorated ) f.setUndecorated( true )
+//      val cp = f.getContentPane()
+//      cp.add( panel, BorderLayout.CENTER )
+      f.setContentPane( panel )
+      f.pack()
+      f
+   }
+
+   def meterUpdate( peakRMSPairs: Array[ Float ]) {
+      meterPanel.meterUpdate( peakRMSPairs, 0, System.currentTimeMillis )
+   }
+}

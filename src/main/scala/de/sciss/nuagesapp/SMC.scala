@@ -38,9 +38,12 @@ import de.sciss.synth._
 import de.sciss.freesound.swing.{SearchProgressFrame, SearchResultFrame, SearchQueryFrame, LoginFrame}
 import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
 import actors.DaemonActor
-import java.io.{FilenameFilter, File, RandomAccessFile}
-import java.awt.{EventQueue, GraphicsEnvironment}
-import javax.swing.{JComponent, JFrame, Box, WindowConstants}
+import osc.OSCResponder
+import de.sciss.osc.OSCMessage
+import de.sciss.scalainterpreter.LogPane
+import java.awt.{Font, EventQueue, GraphicsEnvironment}
+import java.io.{PrintStream, FilenameFilter, File, RandomAccessFile}
+import javax.swing.{JScrollPane, JComponent, JFrame, Box, WindowConstants}
 
 /**
  *    @version 0.12, 02-Oct-10
@@ -52,12 +55,14 @@ object SMC extends Runnable {
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
    val INTERNAL_AUDIO      = false
-   val MASTER_NUMCHANNELS  = 4
+   val MASTER_NUMCHANNELS  = 6
    val MASTER_OFFSET       = 0
    val MIC_OFFSET          = 0
    val SOLO_OFFSET         = 10      // -1 for solo-off! 10 = MOTU 828 S/PDIF
    val SOLO_NUMCHANNELS    = 2
-   val LUDGER_OFFSET       = 2
+   val LUDGER_OFFSET       = 14     //  14 = MOTU 828 ADAT begin
+   val LUDGER_NUMCHANNELS  = 2
+   val REC_COPY            = Some( 14 )   // 14 = MOTU 828 ADAT begin 
    val ROBERT_OFFSET       = 4
    val METERS              = true
    val FREESOUND           = false
@@ -93,6 +98,21 @@ object SMC extends Runnable {
    @volatile var config: NuagesConfig = _
 
    val support = new REPLSupport
+
+   val logPane = {
+      val res = new LogPane( 2, 30 )
+      res.init
+      val scroll = res.getComponent( 0 ).asInstanceOf[ JScrollPane ]
+      scroll.setBorder( null )
+      scroll.getViewport().getView().setFont( new Font( "Menlo", Font.PLAIN, 8 ))
+      val printStream = new PrintStream( res.outputStream )
+      System.setErr( printStream )
+      System.setOut( printStream )
+//      ggLog.writer.write( "Make noise.\n" )
+      Console.setErr( res.outputStream )
+      Console.setOut( res.outputStream )
+      res
+   }
    
    def run {
       // prevent actor starvation!!!
@@ -104,7 +124,8 @@ object SMC extends Runnable {
 //      val sspw = ssp.makeWindow( undecorated = true )
 //      sspw.pack()
 
-      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - 32 /* sspw.getHeight() + 3 */
+      val maxX = SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 48
+      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - 35 /* sspw.getHeight() + 3 */
 //      sspw.setLocation( SCREEN_BOUNDS.x - 3, maxY - 1 )
 
 //      val ntp  = new NodeTreePanel()
@@ -126,24 +147,45 @@ object SMC extends Runnable {
             support.s = srv
 
             // nuages
-            initNuages( maxY )
+            initNuages( maxX, maxY )
 
             // freesound
-            if( FREESOUND ) {
+            val filesFrame = if( FREESOUND ) {
                val cred  = new RandomAccessFile( BASE_PATH + fs + "cred.txt", "r" )
                val credL = cred.readLine().split( ":" )
                cred.close()
                initFreesound( credL( 0 ), credL( 1 ))
             } else {
-               newTapesFrame( ssp )
+               newTapesFrame
             }
+            val ctrlP = new ControlPanel( filesFrame )
+//      val cf = ctrlP.makeWindow
+            val ctrlF = new JFrame()
+            ctrlF.setUndecorated( true )
+            val ctrlB = Box.createHorizontalBox()
+            ctrlB.add( ssp )
+            ctrlB.add( Box.createHorizontalStrut( 8 ))
+            ctrlB.add( ctrlP )
+            ctrlB.add( Box.createHorizontalStrut( 4 ))
+            ctrlF.setContentPane( ctrlB )
+            ctrlF.pack()
+            ctrlF.setBounds( SCREEN_BOUNDS.x - 1, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - ctrlF.getHeight() + 2,
+               maxX - SCREEN_BOUNDS.x + 1, ctrlF.getHeight() )
+            ctrlF.setVisible( true )
+
+            val synPostMID = SMCNuages.synPostM.id
+            OSCResponder.add({
+               case OSCMessage( "/meters", `synPostMID`, 0, values @ _* ) =>
+                  EventQueue.invokeLater( new Runnable { def run = ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ]).toArray )})
+            }, s )
+
          }
       }
       Runtime.getRuntime().addShutdownHook( new Thread { override def run = shutDown })
 //      booting.start
    }
 
-   private def initNuages( maxY: Int ) {
+   private def initNuages( maxX: Int, maxY: Int ) {
       val masterChans  = if( INTERNAL_AUDIO ) {
 //         new AudioBus( s, 0, 2 )
          (0 until 2)
@@ -159,7 +201,7 @@ object SMC extends Runnable {
       val f          = new NuagesFrame( config )
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
       val y0 = SCREEN_BOUNDS.y + 22
-      f.setBounds( SCREEN_BOUNDS.x, y0, SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 64, maxY - y0 )
+      f.setBounds( SCREEN_BOUNDS.x, y0, maxX - SCREEN_BOUNDS.x, maxY - y0 )
       f.setUndecorated( true )
 //      f.setAlwaysOnTop( true )
       f.setVisible( true )
@@ -167,7 +209,7 @@ object SMC extends Runnable {
       SMCNuages.init( s, f )
    }
 
-   private def newTapesFrame( serverStatusPanel: JComponent ) {
+   private def newTapesFrame : JFrame = {
       val srf = TapesFrame.fromFolder( new File( TAPES_PATH ))
 //      srf.setLocationRelativeTo( null )
       srf.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
@@ -183,23 +225,11 @@ println( "FS PATH = " + pathO )
             SMCNuages.freesoundFile = pathO
          }
       }
-      val ctrlP = new ControlPanel( srf )
-//      val cf = ctrlP.makeWindow
-      val f = new JFrame()
-      f.setUndecorated( true )
-      val b = Box.createHorizontalBox()
-      b.add( serverStatusPanel )
-      b.add( Box.createHorizontalStrut( 8 ))
-      b.add( ctrlP )
-      b.add( Box.createHorizontalStrut( 4 ))
-      f.setContentPane( b )
-      f.pack()
-      f.setLocation( SCREEN_BOUNDS.x - 1, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - f.getHeight() + 2 )
-      f.setVisible( true )
+      srf
    }
 
    private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],
-                                          icache: Option[ SampleInfoCache ], downloadPath: Option[ String ]) {
+                                          icache: Option[ SampleInfoCache ], downloadPath: Option[ String ]) : JFrame = {
       val srf = new SearchResultFrame( samples, login, title, icache, downloadPath )
       srf.setLocationRelativeTo( null )
       srf.setVisible( true )
@@ -223,9 +253,11 @@ println( "FS PATH = " + pathO )
             SMCNuages.freesoundFile = pathO
          }
       }
+
+      srf
    }
 
-   private def initFreesound( username: String, password: String ) {
+   private def initFreesound( username: String, password: String ) : JFrame = {
       val icachePath = BASE_PATH + fs + "infos"
       val icache = Some( SampleInfoCache.persistent( icachePath ))
       val downloadPath = Some( BASE_PATH + fs + "samples" )
@@ -277,6 +309,8 @@ println( "FS PATH = " + pathO )
       }
 
       if( AUTO_LOGIN ) f.performLogin
+
+      f
    }
 
    private def shutDown { // sync.synchronized { }

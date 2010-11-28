@@ -270,23 +270,24 @@ import support._
 //         in.bind( "in", classOf[ Interpreter ].getName, in )
       })
 
-      val lp = new LogPane
-      lp.init
-      pane.out = Some( lp.writer )
-      Console.setOut( lp.outputStream )
-      Console.setErr( lp.outputStream )
-      System.setErr( new PrintStream( lp.outputStream ))
+//      val lp = new LogPane
+//      lp.init
+      pane.out = Some( SMC.logPane.writer )
+//      Console.setOut( lp.outputStream )
+//      Console.setErr( lp.outputStream )
+//      System.setErr( new PrintStream( lp.outputStream ))
 
       pane.customKeyMapActions += txnKeyStroke -> (() => txnExecute)
 
       pane.init
-      val sp = new JSplitPane( SwingConstants.HORIZONTAL )
-      sp.setTopComponent( pane )
-      sp.setBottomComponent( lp )
-      cp.add( sp )
+//      val sp = new JSplitPane( SwingConstants.HORIZONTAL )
+//      sp.setTopComponent( pane )
+//      sp.setBottomComponent( lp )
+//      cp.add( sp )
+      cp.add( pane )
       val b = GraphicsEnvironment.getLocalGraphicsEnvironment.getMaximumWindowBounds
       setSize( b.width / 2, b.height * 7 / 8 )
-      sp.setDividerLocation( b.height * 2 / 3 )
+//      sp.setDividerLocation( b.height * 2 / 3 )
       setLocationRelativeTo( null )
 //    setLocation( x, getY )
       setDefaultCloseOperation( WindowConstants.EXIT_ON_CLOSE )
