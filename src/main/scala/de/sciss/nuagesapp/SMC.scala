@@ -62,6 +62,11 @@ object SMC extends Runnable {
    val FREESOUND_OFFLINE   = true
    var masterBus : AudioBus = null
 
+   val USE_TABLET          = true
+   val DEBUG_PROXIMITY     = false
+   val NUM_LOOPS           = 7
+   val LOOP_DUR            = 30
+   
    val options          = {
       val o = new ServerOptionsBuilder()
       if( INTERNAL_AUDIO ) {

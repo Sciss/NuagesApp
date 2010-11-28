@@ -46,11 +46,6 @@ object SMCNuages extends TabletListener {
    import DSL._
 //   import NuagesDSL._
 
-   val USE_TABLET       = false
-   val DEBUG_PROXIMITY  = false
-   val NUM_LOOPS        = 7
-   val LOOP_DUR         = 30
-
    var freesoundFile : Option[ String ] = None
    var f : NuagesFrame = null
 
@@ -656,6 +651,7 @@ object SMCNuages extends TabletListener {
    def tabletEvent( e: TabletEvent ) {
       if( !f.isActive() ) return
 //      println( e.getTiltY )
+      println( e.getButtonMask() )
 
       if( (e.getButtonMask() & 0x02) != 0 ) {
          if( e.getID() != MouseEvent.MOUSE_RELEASED ) {
