@@ -55,6 +55,8 @@ object SMC extends Runnable {
    val MASTER_NUMCHANNELS  = 4
    val MASTER_OFFSET       = 0
    val MIC_OFFSET          = 0
+   val SOLO_OFFSET         = 10      // -1 for solo-off! 10 = MOTU 828 S/PDIF
+   val SOLO_NUMCHANNELS    = 2
    val LUDGER_OFFSET       = 2
    val ROBERT_OFFSET       = 4
    val METERS              = true
@@ -147,9 +149,10 @@ object SMC extends Runnable {
       } else {
          new AudioBus( s, MASTER_OFFSET, MASTER_NUMCHANNELS )
       }
-      val soloBus    = Bus.audio( s, 2 )
+//      val soloBus    = Bus.audio( s, 2 )
+      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( new AudioBus( s, SOLO_OFFSET, SOLO_NUMCHANNELS )) else None
       val recordPath = BASE_PATH + fs + "rec"
-      config         = NuagesConfig( s, Some( masterBus ), Some( soloBus ), Some( recordPath ), true )
+      config         = NuagesConfig( s, Some( masterBus ), soloBus, Some( recordPath ), true )
       val f          = new NuagesFrame( config )
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
       val y0 = SCREEN_BOUNDS.y + 22
