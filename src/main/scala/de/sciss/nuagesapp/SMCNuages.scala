@@ -224,6 +224,8 @@ object SMCNuages extends TabletListener {
           }
       }
 
+      val masterBus = f.panel.masterBus.get
+
       gen( "sum_rec" ) {
          val pbuf    = pControl( "buf",  ParamSpec( 0, NUM_LOOPS - 1, LinWarp, 1 ), 0 )
          val pfeed   = pControl( "feed", ParamSpec( 0, 1 ), 0 )
@@ -539,19 +541,19 @@ object SMCNuages extends TabletListener {
       }
 
       // -------------- DIFFUSIONS --------------
-      val masterBusIndex = config.masterBus.get.index
-      val defaultDiffOut = if( !METERS ) config.masterBus.map( RichBus.wrap( _ )) else None 
+//      val masterBusIndex = config.masterBus.get.index
+//      val defaultDiffOut = if( !METERS ) config.masterBus.map( RichBus.wrap( _ )) else None
 
       diff( "O-all" ) {
           val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
-          val pout  = pAudioOut( "out", defaultDiffOut )
+          val pout  = pAudioOut( "out", None )
 
           graph { in =>
              val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
              val inChannels   = sig.size
              val outChannels  = MASTER_NUMCHANNELS
              val outSig        = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
-             if( METERS ) Out.ar( masterBusIndex, outSig )
+//             if( METERS ) Out.ar( masterBusIndex, outSig )
              pout.ar( outSig )
           }
       }
@@ -568,7 +570,7 @@ object SMCNuages extends TabletListener {
          val prota   = pControl( "rota", ParamSpec( 0.0, 1.0 ), 0.0 )
          val pbase   = pControl( "azi",  ParamSpec( 0.0, 360.0 ), 0.0 )
          val pamp    = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
-         val pout    = pAudioOut( "out", defaultDiffOut )
+         val pout    = pAudioOut( "out", None )
 
          graph { in =>
             val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
@@ -602,7 +604,7 @@ object SMCNuages extends TabletListener {
                })
             }
             val outSig = outSig0.toSeq
-            if( METERS ) Out.ar( masterBusIndex, outSig )
+//            if( METERS ) Out.ar( masterBusIndex, outSig )
             pout.ar( outSig.toSeq )
          }
       }
@@ -612,7 +614,7 @@ object SMCNuages extends TabletListener {
           val pfreq = pControl( "freq", ParamSpec( 0.01, 10, ExpWarp ), 0.1 )
           val ppow  = pControl( "pow", ParamSpec( 1, 10 ), 2 )
           val plag  = pControl( "lag", ParamSpec( 0.1, 10 ), 1 )
-          val pout  = pAudioOut( "out", defaultDiffOut )
+          val pout  = pAudioOut( "out", None )
 
           graph { in =>
              val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
@@ -624,7 +626,7 @@ object SMCNuages extends TabletListener {
              val pw           = ppow.kr
              val rands        = Lag.ar( TRand.ar( 0, 1, Dust.ar( List.fill( outChannels )( freq ))).pow( pw ), lag )
              val outSig       = sig1 * rands
-             if( METERS ) Out.ar( masterBusIndex, outSig )
+//             if( METERS ) Out.ar( masterBusIndex, outSig )
              pout.ar( outSig )
           }
       }

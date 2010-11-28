@@ -32,7 +32,6 @@ import de.sciss.synth.swing.{NodeTreePanel, ServerStatusPanel}
 import de.sciss.synth.proc.ProcDemiurg
 import collection.breakOut
 import collection.immutable.{ IndexedSeq => IIdxSeq }
-import javax.swing.WindowConstants
 import de.sciss.synth.io.AudioFile
 import de.sciss.nuages.{NuagesConfig, NuagesFrame}
 import de.sciss.synth._
@@ -41,6 +40,7 @@ import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
 import actors.DaemonActor
 import java.io.{FilenameFilter, File, RandomAccessFile}
 import java.awt.{EventQueue, GraphicsEnvironment}
+import javax.swing.{JComponent, JFrame, Box, WindowConstants}
 
 /**
  *    @version 0.12, 02-Oct-10
@@ -62,7 +62,7 @@ object SMC extends Runnable {
    val METERS              = true
    val FREESOUND           = false
    val FREESOUND_OFFLINE   = true
-   var masterBus : AudioBus = null
+//   var masterBus : AudioBus = null
 
    val USE_TABLET          = true
    val DEBUG_PROXIMITY     = false
@@ -101,16 +101,16 @@ object SMC extends Runnable {
 
 //      val sif  = new ScalaInterpreterFrame( support /* ntp */ )
       val ssp  = new ServerStatusPanel( ServerStatusPanel.COUNTS )
-      val sspw = ssp.makeWindow( undecorated = true )
+//      val sspw = ssp.makeWindow( undecorated = true )
 //      sspw.pack()
 
-      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - sspw.getHeight() + 3
-      sspw.setLocation( SCREEN_BOUNDS.x - 3, maxY - 1 )
+      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - 32 /* sspw.getHeight() + 3 */
+//      sspw.setLocation( SCREEN_BOUNDS.x - 3, maxY - 1 )
 
 //      val ntp  = new NodeTreePanel()
 //      val ntpw = ntp.makeWindow
 //      ntpw.setLocation( sspw.getX, sspw.getY + sspw.getHeight + 32 )
-      sspw.setVisible( true )
+//      sspw.setVisible( true )
 //      ntpw.setVisible( true )
 
 //      sif.setLocation( sspw.getX + sspw.getWidth + 32, sif.getY )
@@ -135,7 +135,7 @@ object SMC extends Runnable {
                cred.close()
                initFreesound( credL( 0 ), credL( 1 ))
             } else {
-               newTapesFrame( sspw.getX() + sspw.getWidth() )
+               newTapesFrame( ssp )
             }
          }
       }
@@ -144,15 +144,18 @@ object SMC extends Runnable {
    }
 
    private def initNuages( maxY: Int ) {
-      masterBus  = if( INTERNAL_AUDIO ) {
-         new AudioBus( s, 0, 2 )
+      val masterChans  = if( INTERNAL_AUDIO ) {
+//         new AudioBus( s, 0, 2 )
+         (0 until 2)
       } else {
-         new AudioBus( s, MASTER_OFFSET, MASTER_NUMCHANNELS )
+//         new AudioBus( s, MASTER_OFFSET, MASTER_NUMCHANNELS )
+         (MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS ))
       }
 //      val soloBus    = Bus.audio( s, 2 )
-      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( new AudioBus( s, SOLO_OFFSET, SOLO_NUMCHANNELS )) else None
+//      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( new AudioBus( s, SOLO_OFFSET, SOLO_NUMCHANNELS )) else None
+      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) ) else None
       val recordPath = BASE_PATH + fs + "rec"
-      config         = NuagesConfig( s, Some( masterBus ), soloBus, Some( recordPath ), true )
+      config         = NuagesConfig( s, Some( masterChans ), soloBus, Some( recordPath ), true )
       val f          = new NuagesFrame( config )
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
       val y0 = SCREEN_BOUNDS.y + 22
@@ -164,7 +167,7 @@ object SMC extends Runnable {
       SMCNuages.init( s, f )
    }
 
-   private def newTapesFrame( cpx: Int ) {
+   private def newTapesFrame( serverStatusPanel: JComponent ) {
       val srf = TapesFrame.fromFolder( new File( TAPES_PATH ))
 //      srf.setLocationRelativeTo( null )
       srf.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
@@ -181,9 +184,18 @@ println( "FS PATH = " + pathO )
          }
       }
       val ctrlP = new ControlPanel( srf )
-      val cf = ctrlP.makeFrame
-      cf.setLocation( cpx, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - cf.getHeight() + 2 )
-      cf.setVisible( true )
+//      val cf = ctrlP.makeWindow
+      val f = new JFrame()
+      f.setUndecorated( true )
+      val b = Box.createHorizontalBox()
+      b.add( serverStatusPanel )
+      b.add( Box.createHorizontalStrut( 8 ))
+      b.add( ctrlP )
+      b.add( Box.createHorizontalStrut( 4 ))
+      f.setContentPane( b )
+      f.pack()
+      f.setLocation( SCREEN_BOUNDS.x - 1, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - f.getHeight() + 2 )
+      f.setVisible( true )
    }
 
    private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],
