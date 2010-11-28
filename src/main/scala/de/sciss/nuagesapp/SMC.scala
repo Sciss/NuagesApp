@@ -135,7 +135,7 @@ object SMC extends Runnable {
                cred.close()
                initFreesound( credL( 0 ), credL( 1 ))
             } else {
-               newTapesFrame
+               newTapesFrame( sspw.getX() + sspw.getWidth() )
             }
          }
       }
@@ -158,15 +158,20 @@ object SMC extends Runnable {
       val y0 = SCREEN_BOUNDS.y + 22
       f.setBounds( SCREEN_BOUNDS.x, y0, SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 64, maxY - y0 )
       f.setUndecorated( true )
+//      f.setAlwaysOnTop( true )
       f.setVisible( true )
       support.nuages = f
       SMCNuages.init( s, f )
    }
 
-   private def newTapesFrame {
+   private def newTapesFrame( cpx: Int ) {
       val srf = TapesFrame.fromFolder( new File( TAPES_PATH ))
-      srf.setLocationRelativeTo( null )
-      srf.setVisible( true )
+//      srf.setLocationRelativeTo( null )
+      srf.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
+      srf.setAlwaysOnTop( true )
+      srf.setLocation( SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - (srf.getWidth() + 64),
+         SCREEN_BOUNDS.y + ((SCREEN_BOUNDS.height - srf.getHeight) >> 1) )
+//      srf.setVisible( true )
       var checked = Set.empty[ String ]
       srf.addListener {
          case TapesFrame.SelectionChanged( sel @ _* ) => {
@@ -175,6 +180,10 @@ println( "FS PATH = " + pathO )
             SMCNuages.freesoundFile = pathO
          }
       }
+      val ctrlP = new ControlPanel( srf )
+      val cf = ctrlP.makeFrame
+      cf.setLocation( cpx, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - cf.getHeight() + 2 )
+      cf.setVisible( true )
    }
 
    private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],

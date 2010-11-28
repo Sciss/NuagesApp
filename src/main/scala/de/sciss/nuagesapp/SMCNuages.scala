@@ -651,7 +651,7 @@ object SMCNuages extends TabletListener {
    def tabletEvent( e: TabletEvent ) {
       if( !f.isActive() ) return
 //      println( e.getTiltY )
-      println( e.getButtonMask() )
+//      println( e.getButtonMask() )
 
       if( (e.getButtonMask() & 0x02) != 0 ) {
          if( e.getID() != MouseEvent.MOUSE_RELEASED ) {
