@@ -505,6 +505,21 @@ object SMCNuages extends TabletListener {
          }
       }
 
+      filter( "~onsets" ) {
+         val pthresh = pControl( "thresh", ParamSpec( 0, 1 ), 0.5 )
+         val pdecay  = pAudio( "decay",  ParamSpec( 0, 1 ), 0 )
+
+         val pmix = pMix
+         graph { in =>
+            val numChannels   = in.numOutputs
+            val bufIDs        = List.fill( numChannels )( bufEmpty( 1024 ).id )
+            val chain1 		   = FFT( bufIDs, in )
+            val onsets        = Onsets.kr( chain1, pthresh.kr )
+            val sig           = Decay.ar( Trig1.ar( onsets, SampleDur.ir ), pdecay.ar ).min( 1 ) // * 2 - 1
+            mix( in, sig, pmix )
+         }
+      }
+
       filter( "m-above" ) {
          val pthresh = pAudio( "thresh", ParamSpec( 1.0e-3, 1.0e-1, ExpWarp ), 1.0e-2 )
          val pmix = pMix
