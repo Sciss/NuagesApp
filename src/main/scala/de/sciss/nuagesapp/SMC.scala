@@ -221,7 +221,7 @@ object SMC extends Runnable {
       srf.addListener {
          case TapesFrame.SelectionChanged( sel @ _* ) => {
             val pathO = sel.headOption.map( _.file.getAbsolutePath() ) 
-println( "FS PATH = " + pathO )
+//println( "FS PATH = " + pathO )
             SMCNuages.freesoundFile = pathO
          }
       }

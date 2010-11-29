@@ -62,16 +62,38 @@ object SMCNuages extends TabletListener {
 
       gen( if( FREESOUND ) "free" else "tape" ) {
          val pspeed  = pAudio( "speed", ParamSpec( 0.1f, 10, ExpWarp ), 1 )
-         val ploop   = pControl( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
+         val ploop   = pScalar( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
          val ppos    = pScalar( "pos", ParamSpec( 0, 1 ), 0 )
-          graph {
-             val path   = freesoundFile.getOrElse( error( "No audiofile selected" ))
-             val spec   = audioFileSpec( path )
-             val b      = bufCue( path, startFrame = (ppos.v * spec.numFrames).toLong )
-             val numCh  = b.numChannels
-             val sig    = VDiskIn.ar( numCh, b.id, pspeed.ar * BufRateScale.ir( b.id ), loop = ploop.kr ).outputs.take(2)
-             if( numCh == 1 ) List( sig( 0 ), sig( 0 )) else sig
-          }
+         graph {
+            val path      = freesoundFile.getOrElse( error( "No audiofile selected" ))
+            val spec      = audioFileSpec( path )
+            val numFrames = spec.numFrames
+            val startFr   = (ppos.v * numFrames).toLong
+            val b         = bufCue( path, startFrame = startFr )
+            val numCh     = b.numChannels
+            val speed     = A2K.kr( pspeed.ar ) * BufRateScale.ir( b.id )
+            val lp0        = ploop.v
+
+            // pos feedback
+            val framesRead = Integrator.kr( speed ) * (SampleRate.ir / ControlRate.ir)
+            val me = Proc.local
+            Impulse.kr( 10 ).react( framesRead ) { smp => ProcTxn.spawnAtomic { implicit tx =>
+               val frame  = startFr + smp( 0 )
+               // not sure we can access them in this scope, so just retrieve the controls...
+               val ppos   = me.control( "pos" )
+//               val ploop  = me.control( "loop" )
+               if( lp0 == 1 ) {
+                  ppos.v = (frame % numFrames).toDouble / numFrames
+               } else {
+                  val pos = (frame.toDouble / numFrames).min( 1.0 )
+                  ppos.v = pos
+                  if( pos == 1.0 ) me.stop
+               }
+            }}
+
+            val sig    = VDiskIn.ar( numCh, b.id, speed, loop = ploop.ir ).outputs.take(2)
+            if( numCh == 1 ) List( sig( 0 ), sig( 0 )) else sig
+         }
       }
 
       val audioFiles = new File( BASE_PATH + fs + "sciss" ).listFiles()
