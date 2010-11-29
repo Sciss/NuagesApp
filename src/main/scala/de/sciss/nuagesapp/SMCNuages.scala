@@ -255,7 +255,8 @@ object SMCNuages extends TabletListener {
       gen( "sum_rec" ) {
          val pbuf    = pControl( "buf",  ParamSpec( 0, NUM_LOOPS - 1, LinWarp, 1 ), 0 )
          val pfeed   = pControl( "feed", ParamSpec( 0, 1 ), 0 )
-         val ploop   = pControl( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
+         val ploop   = pScalar( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
+         val ppos    = pControl( "pos", ParamSpec( 0, 1 ), 0 )
          graph {
             val in      = InFeedback.ar( masterBus.index, masterBus.numChannels )
             val w       = 2.0 / in.numOutputs
@@ -269,8 +270,25 @@ object SMCNuages extends TabletListener {
             val feed    = pfeed.kr
             val prelvl  = feed.sqrt
             val reclvl  = (1 - feed).sqrt
-            val loop    = ploop.kr
+            val loop    = ploop.ir
             val rec     = RecordBuf.ar( sig1, bufID, recLevel = reclvl, preLevel = prelvl, loop = loop )
+
+            // pos feedback
+//            val pos     = Line.kr( 0, 1, BufDur.kr( bufID ))
+            val bufFr   = BufFrames.kr( bufID )
+            val pos     = Phasor.kr( 1, SampleRate.ir/ControlRate.ir, 0, bufFr * 2 ) / bufFr // BufDur.kr( bufID ).reciprocal
+            val me      = Proc.local
+            val lp0     = ploop.v
+            Impulse.kr( 10 ).react( pos ) { smp => ProcTxn.spawnAtomic { implicit tx =>
+               val pos0 = smp( 0 )
+               // not sure we can access them in this scope, so just retrieve the controls...
+               val ppos = me.control( "pos" )
+               ppos.v   = if( lp0 == 1 ) (pos0 % 1.0) else pos0.min( 1.0 )
+            }}
+
+            Done.kr( rec ).react { ProcTxn.spawnAtomic { implicit tx => me.stop }}
+
+
             Silent.ar( 2 )// dummy thru
          }
       }
@@ -286,14 +304,31 @@ object SMCNuages extends TabletListener {
       filter( "rec" ) {
          val pbuf    = pControl( "buf",  ParamSpec( 0, NUM_LOOPS - 1, LinWarp, 1 ), 0 )
          val pfeed   = pControl( "feed", ParamSpec( 0, 1 ), 0 )
-         val ploop   = pControl( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
+         val ploop   = pScalar( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
+         val ppos    = pScalar( "pos", ParamSpec( 0, 1 ), 0 )
          graph { in =>
             val bufID   = Select.kr( pbuf.kr, loopBufIDs )
             val feed    = pfeed.kr
             val prelvl  = feed.sqrt
             val reclvl  = (1 - feed).sqrt
-            val loop    = ploop.kr
+            val loop    = ploop.ir
             val rec     = RecordBuf.ar( in, bufID, recLevel = reclvl, preLevel = prelvl, loop = loop )
+
+            // pos feedback
+//            val pos     = Line.kr( 0, 1, BufDur.kr( bufID ))
+            val bufFr   = BufFrames.kr( bufID )
+            val pos     = Phasor.kr( 1, SampleRate.ir/ControlRate.ir, 0, bufFr * 2 ) / bufFr // BufDur.kr( bufID ).reciprocal
+            val me      = Proc.local
+            val lp0     = ploop.v
+            Impulse.kr( 10 ).react( pos ) { smp => ProcTxn.spawnAtomic { implicit tx =>
+               val pos0 = smp( 0 )
+               // not sure we can access them in this scope, so just retrieve the controls...
+               val ppos = me.control( "pos" )
+               ppos.v   = if( lp0 == 1 ) (pos0 % 1.0) else pos0.min( 1.0 )
+            }}
+
+            Done.kr( rec ).react { ProcTxn.spawnAtomic { implicit tx => me.bypass }}
+
             in  // dummy thru
          }
       }
