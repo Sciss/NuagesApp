@@ -126,7 +126,7 @@ object SMCNuages extends TabletListener {
 
       gen( "loop" ) {
          val pbuf    = pControl( "buf",   ParamSpec( 0, NUM_LOOPS - 1, LinWarp, 1 ), 0 )
-         val pspeed  = pControl( "speed", ParamSpec( 0.125, 2.3511, ExpWarp ), 1 )
+         val pspeed  = pAudio( "speed", ParamSpec( 0.125, 2.3511, ExpWarp ), 1 )
          val pstart  = pControl( "start", ParamSpec( 0, 1 ), 0 )
          val pdur    = pControl( "dur",   ParamSpec( 0, 1 ), 1 )
          graph {
@@ -137,7 +137,7 @@ object SMCNuages extends TabletListener {
             val numFrames  = pdur.kr * (loopFrames - startFrame)
             val lOffset	   = Latch.kr( in = startFrame, trig = trig1 )
             val lLength	   = Latch.kr( in = numFrames,  trig = trig1 )
-            val speed      = pspeed.kr
+            val speed      = A2K.kr( pspeed.ar )
             val duration	= lLength / (speed * SampleRate.ir) - 2
             val gate1	   = Trig1.kr( in = gateTrig1, dur = duration )
             val env		   = Env.asr( 2, 1, 2, linShape )	// \sin
@@ -380,6 +380,17 @@ object SMCNuages extends TabletListener {
          }
       }
 
+      filter( "hilbert" ) {
+         val pfreq   = pAudio( "freq", ParamSpec( -1, 1 ), 0.0 )
+         val pmix    = pMix
+         graph { in =>
+            val freq    = pfreq.ar
+            val freqHz  = freq.abs.linexp( 0, 1, 20, 12000 ) * freq.signum
+            val flt     = FreqShift.ar( in, freqHz )
+            mix( in, flt, pmix )
+         }
+      }
+
       filter( "filt" ) {
          val pfreq   = pAudio( "freq", ParamSpec( -1, 1 ), 0.54 )
          val pmix    = pMix
@@ -481,12 +492,25 @@ object SMCNuages extends TabletListener {
          }
       }
 
+      filter( "~skew" ) {
+         val plo  = pAudio( "lo", ParamSpec( 0, 1 ), 0 )
+         val phi  = pAudio( "hi", ParamSpec( 0, 1 ), 1 )
+         val ppow = pAudio( "pow", ParamSpec( 0.125, 8, ExpWarp ), 1 )
+         val prnd = pAudio( "rnd", ParamSpec( 0, 1 ), 0 )
+
+         val pmix = pMix
+         graph { in =>
+            val sig = in.clip2( 1 ).linlin( -1, 1, plo.ar, phi.ar ).pow( ppow.ar ).round( prnd.ar ) * 2 - 1
+            mix( in, sig, pmix )
+         }
+      }
+
       filter( "m-above" ) {
-         val pthresh = pControl( "thresh", ParamSpec( 1.0e-3, 1.0e-1, ExpWarp ), 1.0e-2 )
+         val pthresh = pAudio( "thresh", ParamSpec( 1.0e-3, 1.0e-1, ExpWarp ), 1.0e-2 )
          val pmix = pMix
          graph { in =>
             val numChannels   = in.numOutputs
-            val thresh		   = pthresh.kr
+            val thresh		   = A2K.kr( pthresh.ar )
             val env			   = Env( 0.0, List( S( 0.2, 0.0, stepShape ), S( 0.2, 1.0, linShape )))
             val ramp			   = EnvGen.kr( env )
             val volume		   = LinLin.kr( thresh, 1.0e-3, 1.0e-1, 32, 4 )
@@ -504,11 +528,11 @@ object SMCNuages extends TabletListener {
       }
 
       filter( "m-below" ) {
-         val pthresh = pControl( "thresh", ParamSpec( 1.0e-2, 1.0e-0, ExpWarp ), 1.0e-1 )
+         val pthresh = pAudio( "thresh", ParamSpec( 1.0e-2, 1.0e-0, ExpWarp ), 1.0e-1 )
          val pmix = pMix
          graph { in =>
             val numChannels   = in.numOutputs
-            val thresh		   = pthresh.kr
+            val thresh		   = A2K.kr( pthresh.ar )
             val env			   = Env( 0.0, List( S( 0.2, 0.0, stepShape ), S( 0.2, 1.0, linShape )))
             val ramp			   = EnvGen.kr( env )
 //            val volume		   = LinLin.kr( thresh, 1.0e-3, 1.0e-1, 32, 4 )
@@ -529,15 +553,15 @@ object SMCNuages extends TabletListener {
       }
 
       filter( "pitch" ) {
-         val ptrans  = pControl( "shift", ParamSpec( 0.125, 4, ExpWarp ), 1 )
-         val ptime   = pControl( "time",  ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
-         val ppitch  = pControl( "pitch", ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
+         val ptrans  = pAudio( "shift", ParamSpec( 0.125, 4, ExpWarp ), 1 )
+         val ptime   = pAudio( "time",  ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
+         val ppitch  = pAudio( "pitch", ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
          val pmix    = pMix
          graph { in =>
             val grainSize  = 0.5f
-            val pitch	   = ptrans.kr
-            val timeDisp	= ptime.kr
-            val pitchDisp	= ppitch.kr
+            val pitch	   = A2K.kr( ptrans.ar )
+            val timeDisp	= A2K.kr( ptime.ar )
+            val pitchDisp	= A2K.kr( ppitch.ar )
             val flt		   = PitchShift.ar( in, grainSize, pitch, pitchDisp, timeDisp * grainSize )
             mix( in, flt, pmix )
          }
