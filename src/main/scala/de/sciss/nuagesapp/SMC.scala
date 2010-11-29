@@ -56,6 +56,7 @@ object SMC extends Runnable {
    val NUAGES_ANTIALIAS    = false
    val INTERNAL_AUDIO      = false
    val MASTER_NUMCHANNELS  = 6
+   val MASTER_CHANGROUPS   = ("M", 0, 2) :: ("J", 2, 4) :: Nil // List[ Tuple3[ String, Int, Int ]] : suffix, offset, numChannels
    val MASTER_OFFSET       = 0
    val MIC_OFFSET          = 0
    val SOLO_OFFSET         = 10      // -1 for solo-off! 10 = MOTU 828 S/PDIF

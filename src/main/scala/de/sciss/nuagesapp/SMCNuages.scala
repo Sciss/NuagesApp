@@ -40,6 +40,7 @@ import java.io.File
 import SMC._
 import de.sciss.nuages.{NuagesPanel, NuagesFrame}
 import de.sciss.osc.OSCMessage
+import collection.immutable.{IndexedSeq => IIdxSeq}
 
 /**
  *    @version 0.11, 02-Oct-10
@@ -299,7 +300,6 @@ object SMCNuages extends TabletListener {
       def pMix = pAudio( "mix", ParamSpec( 0, 1 ), 1 ) 
 
       // NuagesUHilbert
-      // NuagesUMagBelow
 
       filter( "rec" ) {
          val pbuf    = pControl( "buf",  ParamSpec( 0, NUM_LOOPS - 1, LinWarp, 1 ), 0 )
@@ -503,6 +503,31 @@ object SMCNuages extends TabletListener {
          }
       }
 
+      filter( "m-below" ) {
+         val pthresh = pControl( "thresh", ParamSpec( 1.0e-2, 1.0e-0, ExpWarp ), 1.0e-1 )
+         val pmix = pMix
+         graph { in =>
+            val numChannels   = in.numOutputs
+            val thresh		   = pthresh.kr
+            val env			   = Env( 0.0, List( S( 0.2, 0.0, stepShape ), S( 0.2, 1.0, linShape )))
+            val ramp			   = EnvGen.kr( env )
+//            val volume		   = LinLin.kr( thresh, 1.0e-3, 1.0e-1, 32, 4 )
+            val volume		   = LinLin.kr( thresh, 1.0e-2, 1.0e-0, 4, 1 )
+            val bufIDs        = List.fill( numChannels )( bufEmpty( 1024 ).id )
+//            val chain1 		   = FFT( bufIDs, HPZ1.ar( in ))
+            val chain1 		   = FFT( bufIDs, in )
+            val chain2        = PV_MagBelow( chain1, thresh )
+//            val flt			   = LPZ1.ar( volume * IFFT( chain2 )) * ramp
+            val flt			   = volume * IFFT( chain2 )
+
+            // account for initial dly
+            val env2          = Env( 0.0, List( S( BufDur.kr( bufIDs ) * 2, 0.0, stepShape ), S( 0.2, 1, linShape )))
+            val wet			   = EnvGen.kr( env2 )
+            val sig			   = (in * (1 - wet).sqrt) + (flt * wet)
+            mix( in, sig, pmix )
+         }
+      }
+
       filter( "pitch" ) {
          val ptrans  = pControl( "shift", ParamSpec( 0.125, 4, ExpWarp ), 1 )
          val ptime   = pControl( "time",  ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
@@ -605,28 +630,30 @@ object SMCNuages extends TabletListener {
 //      val masterBusIndex = config.masterBus.get.index
 //      val defaultDiffOut = if( !METERS ) config.masterBus.map( RichBus.wrap( _ )) else None
 
-      diff( "O-all" ) {
+    (("", 0, MASTER_NUMCHANNELS) :: MASTER_CHANGROUPS).zipWithIndex.foreach { tup =>
+      val ((suff, chanOff, numCh), idx) = tup
+
+      def placeChannels( sig: GE ) : GE = {
+         if( numCh == MASTER_NUMCHANNELS ) sig else {
+            Vector.fill( chanOff )( Constant( 0 )) ++ sig.outputs ++ Vector.fill( MASTER_NUMCHANNELS - (numCh + chanOff) )( Constant( 0 ))
+         }
+      }
+
+      diff( "O-all" + suff ) {
           val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
           val pout  = pAudioOut( "out", None )
 
           graph { in =>
              val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
              val inChannels   = sig.size
-             val outChannels  = MASTER_NUMCHANNELS
-             val outSig        = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+             val outChannels  = numCh // MASTER_NUMCHANNELS
+             val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
 //             if( METERS ) Out.ar( masterBusIndex, outSig )
-             pout.ar( outSig )
+             pout.ar( placeChannels( outSig ))
           }
       }
 
-      diff( "O-mute" ) {
-          graph { in =>
-             val gagaism: GE = 0
-             gagaism
-          }
-      }
-
-      diff( "O-pan" ) {
+      diff( "O-pan" + suff ) {
          val pspread = pControl( "spr",  ParamSpec( 0.0, 1.0 ), 0.25 ) // XXX rand
          val prota   = pControl( "rota", ParamSpec( 0.0, 1.0 ), 0.0 )
          val pbase   = pControl( "azi",  ParamSpec( 0.0, 360.0 ), 0.0 )
@@ -638,7 +665,7 @@ object SMCNuages extends TabletListener {
             val rotaAmt       = Lag.kr( prota.kr, 0.1 )
             val spread        = Lag.kr( pspread.kr, 0.5 )
             val inChannels   = in.numOutputs
-            val outChannels  = MASTER_NUMCHANNELS
+            val outChannels  = numCh // MASTER_NUMCHANNELS
 //            val sig1         = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
             val rotaSpeed     = 0.1
             val inSig         = (in * Lag.ar( pamp.ar, 0.1 )).outputs
@@ -666,11 +693,11 @@ object SMCNuages extends TabletListener {
             }
             val outSig = outSig0.toSeq
 //            if( METERS ) Out.ar( masterBusIndex, outSig )
-            pout.ar( outSig.toSeq )
+            pout.ar( placeChannels( outSig.toSeq ))
          }
       }
 
-      diff( "O-rnd" ) {
+      diff( "O-rnd" + suff ) {
           val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
           val pfreq = pControl( "freq", ParamSpec( 0.01, 10, ExpWarp ), 0.1 )
           val ppow  = pControl( "pow", ParamSpec( 1, 10 ), 2 )
@@ -680,7 +707,7 @@ object SMCNuages extends TabletListener {
           graph { in =>
              val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
              val inChannels   = sig.size
-             val outChannels  = MASTER_NUMCHANNELS
+             val outChannels  = numCh // MASTER_NUMCHANNELS
              val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
              val freq         = pfreq.kr
              val lag          = plag.kr
@@ -688,7 +715,15 @@ object SMCNuages extends TabletListener {
              val rands        = Lag.ar( TRand.ar( 0, 1, Dust.ar( List.fill( outChannels )( freq ))).pow( pw ), lag )
              val outSig       = sig1 * rands
 //             if( METERS ) Out.ar( masterBusIndex, outSig )
-             pout.ar( outSig )
+             pout.ar( placeChannels( outSig ))
+          }
+      }
+    }
+
+      diff( "O-mute" ) {
+          graph { in =>
+             val gagaism: GE = 0
+             gagaism
           }
       }
 
