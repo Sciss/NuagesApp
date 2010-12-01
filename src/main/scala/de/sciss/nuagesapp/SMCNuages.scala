@@ -251,7 +251,7 @@ object SMCNuages extends TabletListener {
           }
       }
 
-      val masterBus = f.panel.masterBus.get
+//      val masterBus = f.panel.masterBus.get
 
       gen( "sum_rec" ) {
          val pbuf    = pControl( "buf",  ParamSpec( 0, NUM_LOOPS - 1, LinWarp, 1 ), 0 )
@@ -669,12 +669,14 @@ object SMCNuages extends TabletListener {
 //      val masterBusIndex = config.masterBus.get.index
 //      val defaultDiffOut = if( !METERS ) config.masterBus.map( RichBus.wrap( _ )) else None
 
-    (("", 0, MASTER_NUMCHANNELS) :: MASTER_CHANGROUPS).zipWithIndex.foreach { tup =>
+      val chanConfigs = (("", 0, masterBus.numChannels) :: (if( INTERNAL_AUDIO ) Nil else MASTER_CHANGROUPS))
+
+    chanConfigs.zipWithIndex.foreach { tup =>
       val ((suff, chanOff, numCh), idx) = tup
 
       def placeChannels( sig: GE ) : GE = {
-         if( numCh == MASTER_NUMCHANNELS ) sig else {
-            Vector.fill( chanOff )( Constant( 0 )) ++ sig.outputs ++ Vector.fill( MASTER_NUMCHANNELS - (numCh + chanOff) )( Constant( 0 ))
+         if( numCh == masterBus.numChannels ) sig else {
+            Vector.fill( chanOff )( Constant( 0 )) ++ sig.outputs ++ Vector.fill( masterBus.numChannels - (numCh + chanOff) )( Constant( 0 ))
          }
       }
 
@@ -685,7 +687,7 @@ object SMCNuages extends TabletListener {
           graph { in =>
              val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
              val inChannels   = sig.size
-             val outChannels  = numCh // MASTER_NUMCHANNELS
+             val outChannels  = numCh
              val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
 //             if( METERS ) Out.ar( masterBusIndex, outSig )
              pout.ar( placeChannels( outSig ))
@@ -704,7 +706,7 @@ object SMCNuages extends TabletListener {
             val rotaAmt       = Lag.kr( prota.kr, 0.1 )
             val spread        = Lag.kr( pspread.kr, 0.5 )
             val inChannels   = in.numOutputs
-            val outChannels  = numCh // MASTER_NUMCHANNELS
+            val outChannels  = numCh
 //            val sig1         = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
             val rotaSpeed     = 0.1
             val inSig         = (in * Lag.ar( pamp.ar, 0.1 )).outputs
@@ -746,7 +748,7 @@ object SMCNuages extends TabletListener {
           graph { in =>
              val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
              val inChannels   = sig.size
-             val outChannels  = numCh // MASTER_NUMCHANNELS
+             val outChannels  = numCh
              val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
              val freq         = pfreq.kr
              val lag          = plag.kr

@@ -42,19 +42,18 @@ import osc.OSCResponder
 import de.sciss.osc.OSCMessage
 import de.sciss.scalainterpreter.LogPane
 import java.awt.{Font, EventQueue, GraphicsEnvironment}
-import java.io.{PrintStream, FilenameFilter, File, RandomAccessFile}
 import javax.swing.{JScrollPane, JComponent, JFrame, Box, WindowConstants}
+import java.util.Properties
+import java.io.{FileOutputStream, FileInputStream, PrintStream, FilenameFilter, File, RandomAccessFile}
 
 /**
  *    @version 0.12, 02-Oct-10
  */
 object SMC extends Runnable {
    val fs                  = File.separator
-   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "CafeConcrete"
-   val TAPES_PATH          = BASE_PATH + fs + "tapes"
+//   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "CafeConcrete"
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
-   val INTERNAL_AUDIO      = false
    val MASTER_NUMCHANNELS  = 6
    val MASTER_CHANGROUPS   = ("M", 0, 2) :: ("J", 2, 4) :: Nil // List[ Tuple3[ String, Int, Int ]] : suffix, offset, numChannels
    val MASTER_OFFSET       = 0
@@ -68,7 +67,32 @@ object SMC extends Runnable {
    val METERS              = true
    val FREESOUND           = false
    val FREESOUND_OFFLINE   = true
-//   var masterBus : AudioBus = null
+   var masterBus : AudioBus = null
+
+   private val PROP_BASEPATH        = "basepath"
+   private val PROP_INTERNALAUDIO   = "internalaudio"
+
+   val properties          = {
+      val file = new File( "nuages-settings.xml" )
+      val prop = new Properties()
+      if( file.isFile ) {
+         val is = new FileInputStream( file )
+         prop.loadFromXML( is )
+         is.close
+      } else {
+         prop.setProperty( PROP_BASEPATH,
+            new File( new File( System.getProperty( "user.home" ), "Desktop" ), "Nuages" ).getAbsolutePath )
+         prop.setProperty( PROP_INTERNALAUDIO, "false" )
+         val os = new FileOutputStream( file )
+         prop.storeToXML( os, "Nuages Settings" )
+         os.close
+      }
+      prop
+   }
+
+   val BASE_PATH           = properties.getProperty( PROP_BASEPATH )
+   val TAPES_PATH          = BASE_PATH + fs + "tapes"
+   val INTERNAL_AUDIO      = properties.getProperty( PROP_INTERNALAUDIO ).toBoolean
 
    val USE_TABLET          = true
    val DEBUG_PROXIMITY     = false
@@ -196,10 +220,11 @@ object SMC extends Runnable {
       }
 //      val soloBus    = Bus.audio( s, 2 )
 //      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( new AudioBus( s, SOLO_OFFSET, SOLO_NUMCHANNELS )) else None
-      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) ) else None
+      val soloBus    = if( !INTERNAL_AUDIO && (SOLO_OFFSET >= 0) ) Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) ) else None
       val recordPath = BASE_PATH + fs + "rec"
       config         = NuagesConfig( s, Some( masterChans ), soloBus, Some( recordPath ), true )
       val f          = new NuagesFrame( config )
+      masterBus      = f.panel.masterBus.get // XXX not so elegant
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
       val y0 = SCREEN_BOUNDS.y + 22
       f.setBounds( SCREEN_BOUNDS.x, y0, maxX - SCREEN_BOUNDS.x, maxY - y0 )

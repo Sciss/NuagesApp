@@ -43,12 +43,13 @@ class ControlPanel( tapesFrame: JFrame ) extends JPanel {
 //      val mg = new PeakMeterGroup( Array( m1, m2 ))
 //      panel.add( m1 )
 //      panel.add( m2 )
+      val numCh = masterBus.numChannels
       meterPanel.setOrientation( SwingConstants.HORIZONTAL )
-      meterPanel.setNumChannels( MASTER_NUMCHANNELS )
+      meterPanel.setNumChannels( numCh )
       meterPanel.setBorder( true )
       val d = meterPanel.getPreferredSize()
-      val dn = 30 / MASTER_NUMCHANNELS 
-      d.height = MASTER_NUMCHANNELS * dn + 7
+      val dn = 30 / numCh
+      d.height = numCh * dn + 7
       meterPanel.setPreferredSize( d )
       meterPanel.setMaximumSize( d )
       panel.add( meterPanel )
