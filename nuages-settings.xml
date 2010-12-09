@@ -3,7 +3,8 @@
 <properties>
 <comment>Nuages Settings</comment>
 <entry key="basepath">/Users/hhrutz/Desktop/MEX</entry>
-<entry key="internalaudio">false</entry>
+<entry key="indevice">Built-in Microphone</entry>
+<entry key="outdevice">Built-in Output</entry>
 <entry key="masteroffset">0</entry>
 <entry key="masternumchans">2</entry>
 <entry key="masterchangroups"/>

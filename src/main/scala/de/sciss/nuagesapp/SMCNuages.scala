@@ -153,13 +153,14 @@ object SMCNuages extends TabletListener {
          }
       }
 
+      require( MIC_NUMCHANNELS == 2 )
       gen( "mic" ) {
          val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
          val pfeed   = pAudio( "feed", ParamSpec( 0, 1 ), 0 )
          graph {
-            val off        = if( INTERNAL_AUDIO ) 0 else MIC_OFFSET
+            val off        = /* if( INTERNAL_AUDIO ) 0 else */ MIC_OFFSET
             val boost      = pboost.ar
-            val pureIn	   = In.ar( NumOutputBuses.ir + off, 2 ) * boost
+            val pureIn	   = In.ar( NumOutputBuses.ir + off, MIC_NUMCHANNELS ) * boost
             val bandFreqs	= List( 150, 800, 3000 )
             val ins		   = HPZ1.ar( pureIn ) // .outputs
             var outs: GE   = 0
@@ -691,7 +692,7 @@ object SMCNuages extends TabletListener {
 //      val masterBusIndex = config.masterBus.get.index
 //      val defaultDiffOut = if( !METERS ) config.masterBus.map( RichBus.wrap( _ )) else None
 
-      val chanConfigs = (("", 0, masterBus.numChannels) :: (if( INTERNAL_AUDIO ) Nil else MASTER_CHANGROUPS))
+      val chanConfigs = (("", 0, masterBus.numChannels) :: (/*if( INTERNAL_AUDIO ) Nil else */ MASTER_CHANGROUPS))
 
     chanConfigs.zipWithIndex.foreach { tup =>
       val ((suff, chanOff, numCh), idx) = tup
@@ -816,7 +817,7 @@ object SMCNuages extends TabletListener {
                      sigOut( outChI + 1 ) += sigIn * fr.sqrt
                   }
                }
-               sigOut.toSeq
+               Limiter.ar( sigOut.toSeq )
             }
             assert( sig1.numOutputs == numOut )
             Out.ar( off, sig1 )

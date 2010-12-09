@@ -70,7 +70,9 @@ object SMC extends Runnable {
    var masterBus : AudioBus = null
 
    private val PROP_BASEPATH           = "basepath"
-   private val PROP_INTERNALAUDIO      = "internalaudio"
+//   private val PROP_INTERNALAUDIO      = "internalaudio"
+   private val PROP_INDEVICE           = "indevice"
+   private val PROP_OUTDEVICE          = "outdevice"
    private val PROP_MASTERNUMCHANS     = "masternumchans"
    private val PROP_MASTEROFFSET       = "masteroffset"
    private val PROP_MASTERCHANGROUPS   = "masterchangroups"
@@ -90,7 +92,9 @@ object SMC extends Runnable {
       } else {
          prop.setProperty( PROP_BASEPATH,
             new File( new File( System.getProperty( "user.home" ), "Desktop" ), "Nuages" ).getAbsolutePath )
-         prop.setProperty( PROP_INTERNALAUDIO, false.toString )
+//         prop.setProperty( PROP_INTERNALAUDIO, false.toString )
+         prop.setProperty( PROP_INDEVICE, "" )
+         prop.setProperty( PROP_OUTDEVICE, "" )
          prop.setProperty( PROP_MASTERNUMCHANS, 2.toString )
          prop.setProperty( PROP_MASTEROFFSET, 0.toString )
          prop.setProperty( PROP_MASTERCHANGROUPS, "" )
@@ -124,11 +128,12 @@ object SMC extends Runnable {
 
    val BASE_PATH           = properties.getProperty( PROP_BASEPATH )
    val TAPES_PATH          = BASE_PATH + fs + "tapes"
-   val INTERNAL_AUDIO      = properties.getProperty( PROP_INTERNALAUDIO, false.toString ).toBoolean
+//   val INTERNAL_AUDIO      = properties.getProperty( PROP_INTERNALAUDIO, false.toString ).toBoolean
    val MASTER_NUMCHANNELS  = properties.getProperty( PROP_MASTERNUMCHANS, 2.toString ).toInt
    val MASTER_OFFSET       = properties.getProperty( PROP_MASTEROFFSET, 0.toString ).toInt
    val MASTER_CHANGROUPS   = decodeGroup( PROP_MASTERCHANGROUPS )
    val MIC_OFFSET          = properties.getProperty( PROP_MICOFFSET, 0.toString ).toInt
+   val MIC_NUMCHANNELS     = 2   // XXX should be configurable
    val SOLO_OFFSET         = properties.getProperty( PROP_SOLOOFFSET, (-1).toString ).toInt
    val SOLO_NUMCHANNELS    = properties.getProperty( PROP_SOLONUMCHANS, 2.toString ).toInt
    val REC_CHANGROUPS      = decodeGroup( PROP_RECCHANGROUPS )
@@ -141,13 +146,29 @@ object SMC extends Runnable {
    
    val options          = {
       val o = new ServerOptionsBuilder()
-      if( INTERNAL_AUDIO ) {
-         o.deviceNames        = Some( "Built-in Microphone" -> "Built-in Output" )
+      val inDevice   = properties.getProperty( PROP_INDEVICE, "" )
+      val outDevice  = properties.getProperty( PROP_OUTDEVICE, "" )
+      if( inDevice == outDevice ) {
+         if( inDevice != "" ) o.deviceName = Some( inDevice )
       } else {
-         o.deviceName         = Some( "MOTU 828mk2" )
+         o.deviceNames = Some( inDevice -> outDevice )
       }
-      o.inputBusChannels   = 22 // 10
-      o.outputBusChannels  = 22 // 10
+//      if( INTERNAL_AUDIO ) {
+//         o.deviceNames        = Some( "Built-in Microphone" -> "Built-in Output" )
+//      } else {
+//         o.deviceName         = Some( "MOTU 828mk2" )
+//      }
+
+      val maxInIdx = ((MIC_OFFSET + MIC_NUMCHANNELS) ::
+         PEOPLE_CHANGROUPS.map( g => g._2 + g._3 )).max
+
+      val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) :: (if( SOLO_OFFSET >= 0 ) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) ::
+         REC_CHANGROUPS.map( g => g._2 + g._3 )).max
+
+      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
+
+      o.inputBusChannels   = maxInIdx // 10
+      o.outputBusChannels  = maxOutIdx // 10
       o.audioBusChannels   = 512
       o.loadSynthDefs      = false
       o.memorySize         = 65536
@@ -251,16 +272,16 @@ object SMC extends Runnable {
    }
 
    private def initNuages( maxX: Int, maxY: Int ) {
-      val masterChans  = if( INTERNAL_AUDIO ) {
+      val masterChans  = /* if( INTERNAL_AUDIO ) {
 //         new AudioBus( s, 0, 2 )
          (0 until 2)
-      } else {
+      } else { */
 //         new AudioBus( s, MASTER_OFFSET, MASTER_NUMCHANNELS )
          (MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS ))
-      }
+//      }
 //      val soloBus    = Bus.audio( s, 2 )
 //      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( new AudioBus( s, SOLO_OFFSET, SOLO_NUMCHANNELS )) else None
-      val soloBus    = if( !INTERNAL_AUDIO && (SOLO_OFFSET >= 0) ) Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) ) else None
+      val soloBus    = if( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0) ) Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) ) else None
       val recordPath = BASE_PATH + fs + "rec"
       config         = NuagesConfig( s, Some( masterChans ), soloBus, Some( recordPath ), true )
       val f          = new NuagesFrame( config )
