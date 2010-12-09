@@ -54,23 +54,31 @@ object SMC extends Runnable {
 //   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "CafeConcrete"
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
-   val MASTER_NUMCHANNELS  = 6
-   val MASTER_CHANGROUPS   = ("M", 0, 2) :: ("J", 2, 4) :: Nil // List[ Tuple3[ String, Int, Int ]] : suffix, offset, numChannels
-   val MASTER_OFFSET       = 0
-   val MIC_OFFSET          = 0
-   val SOLO_OFFSET         = 10      // -1 for solo-off! 10 = MOTU 828 S/PDIF
-   val SOLO_NUMCHANNELS    = 2
-   val LUDGER_OFFSET       = 14     //  14 = MOTU 828 ADAT begin
-   val LUDGER_NUMCHANNELS  = 2
-   val REC_COPY            = Some( 14 )   // 14 = MOTU 828 ADAT begin 
-   val ROBERT_OFFSET       = 4
+//   val MASTER_NUMCHANNELS  = 6
+//   val MASTER_CHANGROUPS   = ("M", 0, 2) :: ("J", 2, 4) :: Nil // List[ Tuple3[ String, Int, Int ]] : suffix, offset, numChannels
+//   val MASTER_OFFSET       = 0
+//   val MIC_OFFSET          = 0
+//   val SOLO_OFFSET         = 10      // -1 for solo-off! 10 = MOTU 828 S/PDIF
+//   val SOLO_NUMCHANNELS    = 2
+//   val LUDGER_OFFSET       = 14     //  14 = MOTU 828 ADAT begin
+//   val LUDGER_NUMCHANNELS  = 2
+//   val REC_CHANGROUPS      = Some( 14 )   // -1 for none; 14 = MOTU 828 ADAT begin
+//   val ROBERT_OFFSET       = 4
    val METERS              = true
    val FREESOUND           = false
    val FREESOUND_OFFLINE   = true
    var masterBus : AudioBus = null
 
-   private val PROP_BASEPATH        = "basepath"
-   private val PROP_INTERNALAUDIO   = "internalaudio"
+   private val PROP_BASEPATH           = "basepath"
+   private val PROP_INTERNALAUDIO      = "internalaudio"
+   private val PROP_MASTERNUMCHANS     = "masternumchans"
+   private val PROP_MASTEROFFSET       = "masteroffset"
+   private val PROP_MASTERCHANGROUPS   = "masterchangroups"
+   private val PROP_MICOFFSET          = "micoffset"
+   private val PROP_SOLOOFFSET         = "solooffset"
+   private val PROP_SOLONUMCHANS       = "solonumchans"
+   private val PROP_RECCHANGROUPS      = "recchangroups"
+   private val PROP_PEOPLECHANGROUPS   = "peoplechangroups"
 
    val properties          = {
       val file = new File( "nuages-settings.xml" )
@@ -82,7 +90,15 @@ object SMC extends Runnable {
       } else {
          prop.setProperty( PROP_BASEPATH,
             new File( new File( System.getProperty( "user.home" ), "Desktop" ), "Nuages" ).getAbsolutePath )
-         prop.setProperty( PROP_INTERNALAUDIO, "false" )
+         prop.setProperty( PROP_INTERNALAUDIO, false.toString )
+         prop.setProperty( PROP_MASTERNUMCHANS, 2.toString )
+         prop.setProperty( PROP_MASTEROFFSET, 0.toString )
+         prop.setProperty( PROP_MASTERCHANGROUPS, "" )
+         prop.setProperty( PROP_MICOFFSET, 0.toString )
+         prop.setProperty( PROP_SOLOOFFSET, (-1).toString )
+         prop.setProperty( PROP_SOLONUMCHANS, 2.toString )
+         prop.setProperty( PROP_RECCHANGROUPS, "" )
+         prop.setProperty( PROP_PEOPLECHANGROUPS, "" )
          val os = new FileOutputStream( file )
          prop.storeToXML( os, "Nuages Settings" )
          os.close
@@ -90,9 +106,33 @@ object SMC extends Runnable {
       prop
    }
 
+   def decodeGroup( prop: String ) : List[ (String, Int, Int) ] = {
+      val s = properties.getProperty( prop, "" )
+      val r = """\x28(\w+),(\d+),(\d+)\x29""".r
+      try {
+         val l = r.findAllIn( s ).toList
+         l.map { s0 =>
+            val Array( name, offS, chansS ) = s0.substring( 1, s0.length - 1 ).split( ',' )
+            (name, offS.toInt, chansS.toInt)
+         }
+      } catch { case e =>
+         println( "Error matching value '" + s + "' for prop '" + prop + "' : " )
+         e.printStackTrace()
+         Nil
+      }
+   }
+
    val BASE_PATH           = properties.getProperty( PROP_BASEPATH )
    val TAPES_PATH          = BASE_PATH + fs + "tapes"
-   val INTERNAL_AUDIO      = properties.getProperty( PROP_INTERNALAUDIO ).toBoolean
+   val INTERNAL_AUDIO      = properties.getProperty( PROP_INTERNALAUDIO, false.toString ).toBoolean
+   val MASTER_NUMCHANNELS  = properties.getProperty( PROP_MASTERNUMCHANS, 2.toString ).toInt
+   val MASTER_OFFSET       = properties.getProperty( PROP_MASTEROFFSET, 0.toString ).toInt
+   val MASTER_CHANGROUPS   = decodeGroup( PROP_MASTERCHANGROUPS )
+   val MIC_OFFSET          = properties.getProperty( PROP_MICOFFSET, 0.toString ).toInt
+   val SOLO_OFFSET         = properties.getProperty( PROP_SOLOOFFSET, (-1).toString ).toInt
+   val SOLO_NUMCHANNELS    = properties.getProperty( PROP_SOLONUMCHANS, 2.toString ).toInt
+   val REC_CHANGROUPS      = decodeGroup( PROP_RECCHANGROUPS )
+   val PEOPLE_CHANGROUPS   = decodeGroup( PROP_PEOPLECHANGROUPS )
 
    val USE_TABLET          = true
    val DEBUG_PROXIMITY     = false

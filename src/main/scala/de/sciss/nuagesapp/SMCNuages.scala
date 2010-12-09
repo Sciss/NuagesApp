@@ -183,16 +183,38 @@ object SMCNuages extends TabletListener {
          }
       }
 
-      gen( "ludger" ) {
-         val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
-
-         graph {
-            val off        = LUDGER_OFFSET // if( SMC.INTERNAL_AUDIO ) 0 else SMC.MIC_OFFSET
-            val boost      = pboost.ar
-            val pureIn	   = In.ar( NumOutputBuses.ir + off, LUDGER_NUMCHANNELS ) * boost
-//            val st: GE = pureIn :: pureIn :: Nil
-            val st = List.tabulate( 2 )( ch => pureIn \ (ch % pureIn.numOutputs) )
-            st
+      PEOPLE_CHANGROUPS.foreach { group =>
+         val (name, off, numIn) = group
+         gen( name ) {
+            val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 1 )
+            graph {
+               val boost   = pboost.ar
+               val sig     = In.ar( NumOutputBuses.ir + off, numIn ) * boost
+               val numOut  = 2 // XXX configurable
+               val sig1: GE = if( numOut == numIn ) {
+                  sig
+               } else if( numIn == 1 ) {
+                  Vector.fill[ GE ]( numOut )( sig )
+               } else {
+                  val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
+                  val sca     = (numOut - 1).toFloat / (numIn - 1)
+                  sig.outputs.zipWithIndex.foreach { tup =>
+                     val (sigIn, inCh) = tup
+                     val outCh         = inCh * sca
+                     val fr            = outCh % 1f
+                     val outChI        = outCh.toInt
+                     if( fr == 0f ) {
+                        sigOut( outChI ) += sigIn
+                     } else {
+                        sigOut( outChI )     += sigIn * (1 - fr).sqrt
+                        sigOut( outChI + 1 ) += sigIn * fr.sqrt
+                     }
+                  }
+                  sigOut.toSeq
+               }
+               assert( sig1.numOutputs == numOut )
+               sig1
+            }
          }
       }
 
@@ -770,8 +792,35 @@ object SMCNuages extends TabletListener {
 
       val dfPostM = SynthDef( "post-master" ) {
          val sig = In.ar( masterBus.index, masterBus.numChannels )
-         // externer recorder
-         REC_COPY.foreach( Out.ar( _, sig ))
+         // externe recorder
+//         if( REC_COPY >= 0 ) Out.ar( REC_COPY, sig )
+         REC_CHANGROUPS.foreach { group =>
+            val (name, off, numOut) = group
+            val numIn   = masterBus.numChannels
+            val sig1: GE = if( numOut == numIn ) {
+               sig
+            } else if( numIn == 1 ) {
+               Vector.fill[ GE ]( numOut )( sig )
+            } else {
+               val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
+               val sca     = (numOut - 1).toFloat / (numIn - 1)
+               sig.outputs.zipWithIndex.foreach { tup =>
+                  val (sigIn, inCh) = tup
+                  val outCh         = inCh * sca
+                  val fr            = outCh % 1f
+                  val outChI        = outCh.toInt
+                  if( fr == 0f ) {
+                     sigOut( outChI ) += sigIn
+                  } else {
+                     sigOut( outChI )     += sigIn * (1 - fr).sqrt
+                     sigOut( outChI + 1 ) += sigIn * fr.sqrt
+                  }
+               }
+               sigOut.toSeq
+            }
+            assert( sig1.numOutputs == numOut )
+            Out.ar( off, sig1 )
+         }
          // master meters
          val meterTr = Impulse.kr( 20 )
          //val trigA   = Trig1.ar( meterTr, SampleDur.ir )

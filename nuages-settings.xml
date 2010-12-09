@@ -2,6 +2,14 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
 <comment>Nuages Settings</comment>
-<entry key="basepath">/Users/hhrutz/Desktop/CafeConcrete</entry>
-<entry key="internalaudio">true</entry>
+<entry key="basepath">/Users/hhrutz/Desktop/MEX</entry>
+<entry key="internalaudio">false</entry>
+<entry key="masteroffset">0</entry>
+<entry key="masternumchans">2</entry>
+<entry key="masterchangroups"/>
+<entry key="micoffset">0</entry>
+<entry key="peoplechangroups">(ludger,2,2) (markus,4,2) (johannes,6,2)</entry>
+<entry key="recchangroups"/>
+<entry key="solooffset">10</entry>
+<entry key="solonumchans">2</entry>
 </properties>
