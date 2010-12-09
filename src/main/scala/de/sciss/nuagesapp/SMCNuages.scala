@@ -821,12 +821,28 @@ object SMCNuages extends TabletListener {
             assert( sig1.numOutputs == numOut )
             Out.ar( off, sig1 )
          }
-         // master meters
-         val meterTr = Impulse.kr( 20 )
-         //val trigA   = Trig1.ar( meterTr, SampleDur.ir )
-         val peak    = Peak.kr( sig, meterTr )
-         val rms     = A2K.kr( Lag.ar( sig.squared, 0.1 ))
-         SendReply.kr( meterTr, (peak.outputs zip rms.outputs).flatMap( tup => tup._1 :: tup._2 :: Nil ), "/meters" )
+         // master + people meters
+         val meterTr    = Impulse.kr( 20 )
+         //val trigA    = Trig1.ar( meterTr, SampleDur.ir )
+         val (peoplePeak, peopleRMS) = {
+            val res = PEOPLE_CHANGROUPS.map { group =>
+               val (_, off, numIn)  = group
+               val pSig       = In.ar( NumOutputBuses.ir + off, numIn )
+               val peak       = Peak.kr( pSig, meterTr ).outputs
+               val peakM      = peak.tail.foldLeft[ GE ]( peak.head )( _ max _ ) \ 0
+               val rms        = A2K.kr( Lag.ar( pSig.squared, 0.1 ))
+               val rmsM       = (Mix( rms ) / numIn) \ 0
+               (peakM, rmsM)
+//               (Constant( 0 ), Constant( 0 ))
+            }
+            res.map( _._1 ) -> res.map( _._2 )  // elegant it's not
+         }
+         val masterPeak = Peak.kr( sig, meterTr )
+         val masterRMS  = A2K.kr( Lag.ar( sig.squared, 0.1 ))
+         val peak       = masterPeak.outputs ++ peoplePeak
+         val rms        = masterRMS.outputs  ++ peopleRMS
+         val meterData  = (peak zip rms).flatMap( tup => tup._1 :: tup._2 :: Nil )
+         SendReply.kr( meterTr,  meterData, "/meters" )
       }
       synPostM = dfPostM.play( s, addAction = addToTail )
 

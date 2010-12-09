@@ -11,7 +11,11 @@ import java.io.PrintStream
 class ControlPanel( tapesFrame: JFrame ) extends JPanel {
    panel =>
 
-   private val meterPanel = new PeakMeterPanel()
+   private val masterMeterPanel  = new PeakMeterPanel()
+   private val peopleOffset      = masterBus.numChannels << 1
+   private val peopleMeterPanel: Option[ PeakMeterPanel ] =
+      if( PEOPLE_CHANGROUPS.nonEmpty ) Some( new PeakMeterPanel() ) else None
+   
    private var interpreter : Option[ ScalaInterpreterFrame ] = None
 
    {
@@ -44,15 +48,26 @@ class ControlPanel( tapesFrame: JFrame ) extends JPanel {
 //      panel.add( m1 )
 //      panel.add( m2 )
       val numCh = masterBus.numChannels
-      meterPanel.setOrientation( SwingConstants.HORIZONTAL )
-      meterPanel.setNumChannels( numCh )
-      meterPanel.setBorder( true )
-      val d = meterPanel.getPreferredSize()
+      masterMeterPanel.setOrientation( SwingConstants.HORIZONTAL )
+      masterMeterPanel.setNumChannels( numCh )
+      masterMeterPanel.setBorder( true )
+      val d = masterMeterPanel.getPreferredSize()
       val dn = 30 / numCh
       d.height = numCh * dn + 7
-      meterPanel.setPreferredSize( d )
-      meterPanel.setMaximumSize( d )
-      panel.add( meterPanel )
+      masterMeterPanel.setPreferredSize( d )
+      masterMeterPanel.setMaximumSize( d )
+      panel.add( masterMeterPanel )
+      peopleMeterPanel.foreach { p =>
+         p.setOrientation( SwingConstants.HORIZONTAL )
+         p.setNumChannels( PEOPLE_CHANGROUPS.size )
+         p.setBorder( true )
+         val d = p.getPreferredSize()
+         val dn = 30 / numCh
+         d.height = numCh * dn + 7
+         p.setPreferredSize( d )
+         p.setMaximumSize( d )
+         panel.add( p )
+      }
 
       val d1 = logPane.getPreferredSize()
       d1.height = d.height
@@ -104,6 +119,8 @@ class ControlPanel( tapesFrame: JFrame ) extends JPanel {
    }
 
    def meterUpdate( peakRMSPairs: Array[ Float ]) {
-      meterPanel.meterUpdate( peakRMSPairs, 0, System.currentTimeMillis )
+      val tim = System.currentTimeMillis 
+      masterMeterPanel.meterUpdate( peakRMSPairs, 0, tim )
+      peopleMeterPanel.foreach( _.meterUpdate( peakRMSPairs, peopleOffset, tim ))
    }
 }

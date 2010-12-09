@@ -133,7 +133,7 @@ implements PeakMeterView, SwingConstants
 		final int			numMeters	= Math.min( metersCopy.length, peakRMSPairs.length >> 1 );
 		int					dirty		= 0;
 
-		for( int i = 0, j = 0; i < numMeters; i++ ) {
+		for( int i = 0, j = offset; i < numMeters; i++ ) {
 			if( metersCopy[ i ].setPeakAndRMS( peakRMSPairs[ j++ ], peakRMSPairs[ j++ ], time )) dirty++;
 		}
 		
