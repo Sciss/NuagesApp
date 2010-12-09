@@ -301,10 +301,9 @@ object SMC extends Runnable {
 //      srf.setLocationRelativeTo( null )
       srf.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
       srf.setAlwaysOnTop( true )
-      srf.setLocation( SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - (srf.getWidth() + 64),
+      srf.setLocation( SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - (srf.getWidth() + 256),
          SCREEN_BOUNDS.y + ((SCREEN_BOUNDS.height - srf.getHeight) >> 1) )
 //      srf.setVisible( true )
-      var checked = Set.empty[ String ]
       srf.addListener {
          case TapesFrame.SelectionChanged( sel @ _* ) => {
             val pathO = sel.headOption.map( _.file.getAbsolutePath() ) 
