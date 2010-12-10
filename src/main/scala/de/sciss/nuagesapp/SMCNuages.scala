@@ -289,7 +289,8 @@ object SMCNuages extends TabletListener {
                val (add, ch) = tup
                sig( ch % 2 ) += add
             })
-            val sig1    = sig.toSeq * w
+//            val sig1    = sig.toSeq * w
+            val sig1    = LeakDC.ar( Limiter.ar( sig.toSeq * w ))
             val bufID   = Select.kr( pbuf.kr, loopBufIDs )
             val feed    = pfeed.kr
             val prelvl  = feed.sqrt
@@ -335,7 +336,8 @@ object SMCNuages extends TabletListener {
             val prelvl  = feed.sqrt
             val reclvl  = (1 - feed).sqrt
             val loop    = ploop.ir
-            val rec     = RecordBuf.ar( in, bufID, recLevel = reclvl, preLevel = prelvl, loop = loop )
+            val sig     = LeakDC.ar( Limiter.ar( in ))
+            val rec     = RecordBuf.ar( sig /* in */, bufID, recLevel = reclvl, preLevel = prelvl, loop = loop )
 
             // pos feedback
 //            val pos     = Line.kr( 0, 1, BufDur.kr( bufID ))
@@ -353,6 +355,30 @@ object SMCNuages extends TabletListener {
             Done.kr( rec ).react { ProcTxn.spawnAtomic { implicit tx => me.bypass }}
 
             in  // dummy thru
+         }
+      }
+
+      filter( "delay" ) {
+         val ptime   = pAudio( "time", ParamSpec( 0.3,  30.0, ExpWarp ), 10 )
+         val pfeed   = pAudio( "feed", ParamSpec( 0.001, 1.0, ExpWarp ), 0.001 )
+         val pmix    = pMix
+         graph { in =>
+            val numFrames  = (sampleRate * 30).toInt
+            val numChannels= in.numOutputs
+            val buf        = bufEmpty( numFrames, numChannels )
+            val bufID      = buf.id
+            val time       = ptime.ar
+            val lin        = LocalIn.ar( numChannels )
+            val feed       = pfeed.ar
+            val wDry       = (1 - feed).sqrt
+            val wWet       = feed.sqrt
+//            val phase      = DelTapWr.ar( bufID, (in * wDry) + (lin * wWet) )
+//            val flt0       = DelTapRd.ar( bufID, phase, time, 2 ) // interp: 1 none, 2 linear 4 cubic
+            val flt0       = BufDelayL.ar( bufID, (in * wDry) + (lin * wWet), time ) 
+            val flt        = LeakDC.ar( flt0 )
+            LocalOut.ar( flt )
+
+            mix( in, flt, pmix )
          }
       }
 
