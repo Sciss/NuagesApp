@@ -45,6 +45,7 @@
 		<array>
 			<string>$JAVAROOT/ccstm.jar</string>
 			<string>$JAVAROOT/nuagesapp.jar</string>
+			<string>$JAVAROOT/fscapejobs.jar</string>
 			<string>$JAVAROOT/jsyntaxpane.jar</string>
 			<string>$JAVAROOT/prefuse.jar</string>
 			<string>$JAVAROOT/scala-compiler.jar</string>
