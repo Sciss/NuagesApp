@@ -69,7 +69,8 @@ object SMCNuages extends TabletListener {
             val path      = freesoundFile.getOrElse( error( "No audiofile selected" ))
             val spec      = audioFileSpec( path )
             val numFrames = spec.numFrames
-            val startFr   = (ppos.v * numFrames).toLong
+            val startPos  = ppos.v
+            val startFr   = ((if( startPos < 1 ) startPos else 0.0) * numFrames).toLong
             val b         = bufCue( path, startFrame = startFr )
             val numCh     = b.numChannels
             val speed     = A2K.kr( pspeed.ar ) * BufRateScale.ir( b.id )
@@ -325,7 +326,7 @@ object SMCNuages extends TabletListener {
 
       // NuagesUHilbert
 
-      filter( "rec" ) {
+      filter( ">rec" ) {
          val pbuf    = pControl( "buf",  ParamSpec( 0, NUM_LOOPS - 1, LinWarp, 1 ), 0 )
          val pfeed   = pControl( "feed", ParamSpec( 0, 1 ), 0 )
          val ploop   = pScalar( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )

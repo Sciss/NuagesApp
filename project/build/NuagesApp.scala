@@ -11,6 +11,7 @@ class NuagesAppProject( info: ProjectInfo ) extends ProguardProject( info ) {
    val scalaFreesoundSwing = "de.sciss" %% "scalafreesoundswing" % "0.11"
    val soundProcesses      = "de.sciss" %% "soundprocesses" % "0.20"  // XXX tmp
 //   val tabletWrapper       = "tabletwrapper" % "tabletwrapper" % "0.12" from "http://github.com/downloads/Sciss/JNITablet/tabletwrapper-0.12.jar"
+   val fscapeJobs          = "de.sciss" %% "fscapejobs" % "0.10"
 
    // for some reason, we need to add the snapshot repos here again...
    val ccstmRepo           = "CCSTM Release Repository at PPL" at "http://ppl.stanford.edu/ccstm/repo-releases"

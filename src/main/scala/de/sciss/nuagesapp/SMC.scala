@@ -128,6 +128,7 @@ object SMC extends Runnable {
 
    val BASE_PATH           = properties.getProperty( PROP_BASEPATH )
    val TAPES_PATH          = BASE_PATH + fs + "tapes"
+   val REC_PATH            = BASE_PATH + fs + "rec"
 //   val INTERNAL_AUDIO      = properties.getProperty( PROP_INTERNALAUDIO, false.toString ).toBoolean
    val MASTER_NUMCHANNELS  = properties.getProperty( PROP_MASTERNUMCHANS, 2.toString ).toInt
    val MASTER_OFFSET       = properties.getProperty( PROP_MASTEROFFSET, 0.toString ).toInt
@@ -282,8 +283,7 @@ object SMC extends Runnable {
 //      val soloBus    = Bus.audio( s, 2 )
 //      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( new AudioBus( s, SOLO_OFFSET, SOLO_NUMCHANNELS )) else None
       val soloBus    = if( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0) ) Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) ) else None
-      val recordPath = BASE_PATH + fs + "rec"
-      config         = NuagesConfig( s, Some( masterChans ), soloBus, Some( recordPath ), true )
+      config         = NuagesConfig( s, Some( masterChans ), soloBus, Some( REC_PATH ), true )
       val f          = new NuagesFrame( config )
       masterBus      = f.panel.masterBus.get // XXX not so elegant
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
@@ -294,6 +294,8 @@ object SMC extends Runnable {
       f.setVisible( true )
       support.nuages = f
       SMCNuages.init( s, f )
+
+      FScapeNuages.init( s, f )
    }
 
    private def newTapesFrame : JFrame = {
