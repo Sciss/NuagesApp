@@ -117,6 +117,20 @@ object SMCNuages extends TabletListener {
          }
       })
 
+      gen( "(test)" ) {
+         val pamp    = pControl( "amp",  ParamSpec( 0.01, 1.0, ExpWarp ), 1 )
+         val psig    = pControl( "sig",  ParamSpec( 0, 1, LinWarp, 1 ), 0 )
+         val pfreq   = pControl( "freq", ParamSpec( 0.1, 10, ExpWarp ), 1 )
+         graph {
+            val idx = Stepper.kr( Impulse.kr( pfreq.kr ), min = 0, max = masterBus.numChannels )
+            val sigs: GE = (WhiteNoise.ar( 1 ) \ 0) :: (SinOsc.ar( 441 ) \ 0) :: Nil
+            val sig = Select.ar( psig.kr, sigs ) * pamp.kr
+            val sigOut: GE = Vector.tabulate( masterBus.numChannels )( ch => sig * (1 - (ch - idx).abs.min( 1 )))
+//            val sigOut: GE = Vector.tabulate( 2 )( ch => sig * (1 - (ch - idx).abs.min( 1 )))
+            sigOut
+         }
+      }
+
 //      gen( "at_2aside" ) {
 //         val p1  = pAudio( "speed", ParamSpec( 0.1f, 10f, ExpWarp ), 1 )
 //         graph {
@@ -844,7 +858,7 @@ object SMCNuages extends TabletListener {
                      sigOut( outChI + 1 ) += sigIn * fr.sqrt
                   }
                }
-               Limiter.ar( sigOut.toSeq )
+               Limiter.ar( sigOut.toSeq, (-0.2).dbamp )
             }
             assert( sig1.numOutputs == numOut )
             Out.ar( off, sig1 )

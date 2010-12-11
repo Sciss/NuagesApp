@@ -5,12 +5,12 @@
 <entry key="basepath">/Users/hhrutz/Desktop/MEX</entry>
 <entry key="indevice">MOTU 828mk2</entry>
 <entry key="outdevice">MOTU 828mk2</entry>
-<entry key="masteroffset">0</entry>
+<entry key="masteroffset">14</entry>
 <entry key="masternumchans">4</entry>
 <entry key="masterchangroups"/>
 <entry key="micoffset">0</entry>
-<entry key="peoplechangroups">(ludger,2,2) (markus,4,2) (johannes,6,2)</entry>
-<entry key="recchangroups"/>
+<entry key="peoplechangroups">(ludger,14,2) (markus,16,2) (johannes,18,2)</entry>
+<entry key="recchangroups"></entry>
 <entry key="solooffset">10</entry>
 <entry key="solonumchans">2</entry>
 </properties>
