@@ -397,6 +397,26 @@ object SMCNuages extends TabletListener {
          }
       }
 
+//      filter( "mantissa2" ) {
+//         val pbits   = pAudio( "bits", ParamSpec( 3, 16, LinWarp, 1 ), 16 )
+//         val pmix    = pMix
+//
+//         graph { in =>
+//            val flt  = MantissaMask.ar( in, A2K.kr( pbits.ar ))
+//            mix( in, flt, pmix )
+//         }
+//      }
+
+      filter( "mantissa" ) {
+         val pbits   = pAudio( "bits", ParamSpec( 2, 14, LinWarp, 1 ), 14 )
+         val pmix    = pMix
+
+         graph { in =>
+            val flt  = MantissaMask.ar( in, pbits.ar )
+            mix( in, flt, pmix )
+         }
+      }
+
       filter( "achil") {
          val pspeed  = pAudio( "speed", ParamSpec( 0.125, 2.3511, ExpWarp ), 0.5 )
          val pmix    = pMix

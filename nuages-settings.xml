@@ -6,10 +6,10 @@
 <entry key="indevice">MOTU 828mk2</entry>
 <entry key="outdevice">MOTU 828mk2</entry>
 <entry key="masteroffset">14</entry>
-<entry key="masternumchans">4</entry>
-<entry key="masterchangroups"/>
+<entry key="masternumchans">5</entry>
+<entry key="masterchangroups">(q,0,4) (x,4,1)</entry>
 <entry key="micoffset">0</entry>
-<entry key="peoplechangroups">(ludger,14,2) (markus,16,2) (johannes,18,2)</entry>
+<entry key="peoplechangroups">(ludger,14,2) (markus,16,2) (drums,18,2) (bass,20,2)</entry>
 <entry key="recchangroups"></entry>
 <entry key="solooffset">10</entry>
 <entry key="solonumchans">2</entry>
