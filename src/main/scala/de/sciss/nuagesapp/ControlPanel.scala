@@ -98,6 +98,10 @@ class ControlPanel( tapesFrame: JFrame ) extends JPanel {
                         ggInterp.setSelected( false )
                      }
                   })
+                  // for some reason the console is lost,
+                  // this way restores it
+                  Console.setErr( System.err )
+                  Console.setOut( System.out )
                   res
                }
                f.setVisible( true )
