@@ -77,11 +77,12 @@ object Setup extends Runnable {
    private val PROP_MASTERNUMCHANS     = "masternumchans"
    private val PROP_MASTEROFFSET       = "masteroffset"
    private val PROP_MASTERCHANGROUPS   = "masterchangroups"
-   private val PROP_MICOFFSET          = "micoffset"
+//   private val PROP_MICOFFSET          = "micoffset"
    private val PROP_SOLOOFFSET         = "solooffset"
    private val PROP_SOLONUMCHANS       = "solonumchans"
    private val PROP_RECCHANGROUPS      = "recchangroups"
    private val PROP_PEOPLECHANGROUPS   = "peoplechangroups"
+   private val PROP_MICCHANGROUPS      = "micchangroups"
    private val PROP_COLLECTOR          = "collector"
 
    val properties          = {
@@ -100,7 +101,8 @@ object Setup extends Runnable {
          prop.setProperty( PROP_MASTERNUMCHANS, 2.toString )
          prop.setProperty( PROP_MASTEROFFSET, 0.toString )
          prop.setProperty( PROP_MASTERCHANGROUPS, "" )
-         prop.setProperty( PROP_MICOFFSET, 0.toString )
+//         prop.setProperty( PROP_MICOFFSET, 0.toString )
+         prop.setProperty( PROP_MICCHANGROUPS, "" )
          prop.setProperty( PROP_SOLOOFFSET, (-1).toString )
          prop.setProperty( PROP_SOLONUMCHANS, 2.toString )
          prop.setProperty( PROP_RECCHANGROUPS, "" )
@@ -135,11 +137,12 @@ object Setup extends Runnable {
    val MASTER_NUMCHANNELS  = properties.getProperty( PROP_MASTERNUMCHANS, 2.toString ).toInt
    val MASTER_OFFSET       = properties.getProperty( PROP_MASTEROFFSET, 0.toString ).toInt
    val MASTER_CHANGROUPS   = decodeGroup( PROP_MASTERCHANGROUPS )
-   val MIC_OFFSET          = properties.getProperty( PROP_MICOFFSET, 0.toString ).toInt
-   val MIC_NUMCHANNELS     = 2   // XXX should be configurable
+//   val MIC_OFFSET          = properties.getProperty( PROP_MICOFFSET, 0.toString ).toInt
+//   val MIC_NUMCHANNELS     = 2   // XXX should be configurable
    val SOLO_OFFSET         = properties.getProperty( PROP_SOLOOFFSET, (-1).toString ).toInt
    val SOLO_NUMCHANNELS    = properties.getProperty( PROP_SOLONUMCHANS, 2.toString ).toInt
    val REC_CHANGROUPS      = decodeGroup( PROP_RECCHANGROUPS )
+   val MIC_CHANGROUPS      = decodeGroup( PROP_MICCHANGROUPS )
    val PEOPLE_CHANGROUPS   = decodeGroup( PROP_PEOPLECHANGROUPS )
    val USE_COLLECTOR       = properties.getProperty( PROP_COLLECTOR, false.toString ).toBoolean
 
@@ -163,8 +166,10 @@ object Setup extends Runnable {
 //         o.deviceName         = Some( "MOTU 828mk2" )
 //      }
 
-      val maxInIdx = ((MIC_OFFSET + MIC_NUMCHANNELS) ::
-         PEOPLE_CHANGROUPS.map( g => g._2 + g._3 )).max
+//      val maxInIdx = ((MIC_OFFSET + MIC_NUMCHANNELS) ::
+//         PEOPLE_CHANGROUPS.map( g => g._2 + g._3 )).max
+
+      val maxInIdx = (MIC_CHANGROUPS ++ PEOPLE_CHANGROUPS).map( g => g._2 + g._3 ).max
 
       val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) :: (if( SOLO_OFFSET >= 0 ) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) ::
          REC_CHANGROUPS.map( g => g._2 + g._3 )).max

@@ -168,34 +168,62 @@ object Nuages extends TabletListener {
          }
       }
 
-      require( MIC_NUMCHANNELS == 2 )
-      gen( "mic" ) {
-         val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
-         val pfeed   = pAudio( "feed", ParamSpec( 0, 1 ), 0 )
-         graph {
-            val off        = /* if( INTERNAL_AUDIO ) 0 else */ MIC_OFFSET
-            val boost      = pboost.ar
-            val pureIn	   = In.ar( NumOutputBuses.ir + off, MIC_NUMCHANNELS ) * boost
-            val bandFreqs	= List( 150, 800, 3000 )
-            val ins		   = HPZ1.ar( pureIn ) // .outputs
-            var outs: GE   = 0
-            var flt: GE    = ins
-            bandFreqs.foreach( maxFreq => {
-               val band = if( maxFreq != bandFreqs.last ) {
-                  val res  = LPF.ar( flt, maxFreq )
-                  flt	   = HPF.ar( flt, maxFreq )
-                  res
+//      require( MIC_NUMCHANNELS == 2 )
+      MIC_CHANGROUPS.foreach { group =>
+         val (name, off, numIn) = group
+         gen( name ) {
+            val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
+            val pfeed   = pAudio( "feed", ParamSpec( 0, 1 ), 0 )
+            graph {
+//               val off        = /* if( INTERNAL_AUDIO ) 0 else */ MIC_OFFSET
+               val boost      = pboost.ar
+               val pureIn     = In.ar( NumOutputBuses.ir + off, numIn ) * boost
+               val bandFreqs	= List( 150, 800, 3000 )
+               val ins		   = HPZ1.ar( pureIn ) // .outputs
+               var outs: GE   = 0
+               var flt: GE    = ins
+               bandFreqs.foreach( maxFreq => {
+                  val band = if( maxFreq != bandFreqs.last ) {
+                     val res  = LPF.ar( flt, maxFreq )
+                     flt	   = HPF.ar( flt, maxFreq )
+                     res
+                  } else {
+                     flt
+                  }
+                  val amp		= Amplitude.kr( band, 2, 2 )
+                  val slope	= Slope.kr( amp )
+                  val comp		= Compander.ar( band, band, 0.1, 1, slope.max( 1 ).reciprocal, 0.01, 0.01 )
+                  outs		   = outs + comp
+               })
+               val dly        = DelayC.ar( outs, 0.0125, LFDNoise1.kr( 5 ).madd( 0.006, 0.00625 ))
+               val feed       = pfeed.ar * 2 - 1
+               val sig        = XFade2.ar( pureIn, dly, feed )
+
+               val numOut  = 2 // XXX configurable
+               val sig1: GE = if( numOut == numIn ) {
+                  sig
+               } else if( numIn == 1 ) {
+                  Vector.fill[ GE ]( numOut )( sig )
                } else {
-                  flt
+                  val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
+                  val sca     = (numOut - 1).toFloat / (numIn - 1)
+                  sig.outputs.zipWithIndex.foreach { tup =>
+                     val (sigIn, inCh) = tup
+                     val outCh         = inCh * sca
+                     val fr            = outCh % 1f
+                     val outChI        = outCh.toInt
+                     if( fr == 0f ) {
+                        sigOut( outChI ) += sigIn
+                     } else {
+                        sigOut( outChI )     += sigIn * (1 - fr).sqrt
+                        sigOut( outChI + 1 ) += sigIn * fr.sqrt
+                     }
+                  }
+                  sigOut.toSeq
                }
-               val amp		= Amplitude.kr( band, 2, 2 )
-               val slope	= Slope.kr( amp )
-               val comp		= Compander.ar( band, band, 0.1, 1, slope.max( 1 ).reciprocal, 0.01, 0.01 )
-               outs		   = outs + comp
-            })
-            val dly        = DelayC.ar( outs, 0.0125, LFDNoise1.kr( 5 ).madd( 0.006, 0.00625 ))
-            val feed       = pfeed.ar * 2 - 1
-            XFade2.ar( pureIn, dly, feed )
+               assert( sig1.numOutputs == numOut )
+               sig1
+            }
          }
       }
 
