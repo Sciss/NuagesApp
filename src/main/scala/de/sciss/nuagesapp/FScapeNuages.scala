@@ -41,6 +41,7 @@ import DSL._
 
 object FScapeNuages {
    lazy val fsc = FScapeJobs()
+
    private var cnt = 0
 
    def init( s: Server, f: NuagesFrame ) = ProcTxn.atomic { implicit tx =>

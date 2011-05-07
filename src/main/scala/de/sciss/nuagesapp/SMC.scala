@@ -266,6 +266,7 @@ object SMC extends Runnable {
                   EventQueue.invokeLater( new Runnable { def run = ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ]).toArray )})
             }, s )
 
+            FScapeNuages.fsc.connect()( succ => println( if( succ ) "FScape connected." else "!ERROR! : FScape not connected" ))
          }
       }
       Runtime.getRuntime().addShutdownHook( new Thread { override def run = shutDown })
