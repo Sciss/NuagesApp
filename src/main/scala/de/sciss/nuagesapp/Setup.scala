@@ -33,7 +33,6 @@ import de.sciss.synth.proc.ProcDemiurg
 import collection.breakOut
 import collection.immutable.{ IndexedSeq => IIdxSeq }
 import de.sciss.synth.io.AudioFile
-import de.sciss.nuages.{NuagesConfig, NuagesFrame}
 import de.sciss.synth._
 import de.sciss.freesound.swing.{SearchProgressFrame, SearchResultFrame, SearchQueryFrame, LoginFrame}
 import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
@@ -45,6 +44,8 @@ import java.awt.{Font, EventQueue, GraphicsEnvironment}
 import javax.swing.{JScrollPane, JComponent, JFrame, Box, WindowConstants}
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, PrintStream, FilenameFilter, File, RandomAccessFile}
+import de.sciss.nuages.{NuagesPanel, NuagesConfig, NuagesFrame}
+import java.awt.geom.Point2D
 
 /**
  *    @version 0.12, 02-Oct-10
@@ -282,14 +283,18 @@ object Setup extends Runnable {
       } else {
          None
       }
+//NuagesPanel.verbose = true
       config            = NuagesConfig( s, Some( masterChans ), soloBus, Some( REC_PATH ), true, collector = USE_COLLECTOR )
       val f             = new NuagesFrame( config )
-      masterBus         = f.panel.masterBus.get // XXX not so elegant
-      f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
+      val np            = f.panel
+      masterBus         = np.masterBus.get // XXX not so elegant
+      val disp          = np.display
+      disp.setHighQuality( NUAGES_ANTIALIAS )
       val y0 = SCREEN_BOUNDS.y + 22
       f.setBounds( SCREEN_BOUNDS.x, y0, maxX - SCREEN_BOUNDS.x, maxY - y0 )
       f.setUndecorated( true )
 //      f.setAlwaysOnTop( true )
+//      disp.zoom( new Point2D.Float( np.getWidth(), np.getHeight() ), 0.5 ) // don't ask me how these coordinates work
       f.setVisible( true )
       support.nuages = f
       Nuages.init( s, f )

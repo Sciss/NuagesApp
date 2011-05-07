@@ -755,6 +755,8 @@ object Nuages extends TabletListener {
 
       val chanConfigs = (("", 0, masterBus.numChannels) :: (/*if( INTERNAL_AUDIO ) Nil else */ MASTER_CHANGROUPS))
 
+//System.err.println( "HERE 1111" )
+
       chanConfigs.zipWithIndex.foreach { tup =>
          val ((suff, chanOff, numCh), idx) = tup
 
@@ -1000,6 +1002,8 @@ object Nuages extends TabletListener {
    }
 
 //	 ---------------- TabletListener interface ----------------
+
+//   System.err.println( "HERE 2222" )
 
    private var wasInstant = false
 
