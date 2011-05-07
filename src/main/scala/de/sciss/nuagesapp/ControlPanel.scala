@@ -2,7 +2,7 @@ package de.sciss.nuagesapp
 
 import java.awt.event.{ComponentEvent, ComponentAdapter, WindowAdapter, ActionListener, ActionEvent}
 import de.sciss.gui.{PeakMeterPanel, PeakMeter, PeakMeterGroup}
-import SMC._
+import Setup._
 import de.sciss.scalainterpreter.LogPane
 import java.awt.{Font, Color, BorderLayout}
 import javax.swing.{JLabel, WindowConstants, SwingConstants, Box, JToggleButton, BoxLayout, JFrame, JButton, JPanel}

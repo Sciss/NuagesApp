@@ -31,7 +31,7 @@ package de.sciss.nuagesapp
 import de.sciss.nuages.NuagesFrame
 import java.io.File
 import java.util.{Timer => UTimer, TimerTask}
-import SMC._
+import Setup._
 import de.sciss.fscape.FScapeJobs
 import de.sciss.synth
 import synth._

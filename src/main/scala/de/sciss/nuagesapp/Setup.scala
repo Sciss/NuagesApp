@@ -49,7 +49,7 @@ import java.io.{FileOutputStream, FileInputStream, PrintStream, FilenameFilter, 
 /**
  *    @version 0.12, 02-Oct-10
  */
-object SMC extends Runnable {
+object Setup extends Runnable {
    val fs                  = File.separator
 //   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "CafeConcrete"
    val AUTO_LOGIN          = true
@@ -81,6 +81,7 @@ object SMC extends Runnable {
    private val PROP_SOLONUMCHANS       = "solonumchans"
    private val PROP_RECCHANGROUPS      = "recchangroups"
    private val PROP_PEOPLECHANGROUPS   = "peoplechangroups"
+   private val PROP_COLLECTOR          = "collector"
 
    val properties          = {
       val file = new File( "nuages-settings.xml" )
@@ -139,6 +140,7 @@ object SMC extends Runnable {
    val SOLO_NUMCHANNELS    = properties.getProperty( PROP_SOLONUMCHANS, 2.toString ).toInt
    val REC_CHANGROUPS      = decodeGroup( PROP_RECCHANGROUPS )
    val PEOPLE_CHANGROUPS   = decodeGroup( PROP_PEOPLECHANGROUPS )
+   val USE_COLLECTOR       = properties.getProperty( PROP_COLLECTOR, false.toString ).toBoolean
 
    val USE_TABLET          = true
    val DEBUG_PROXIMITY     = false
@@ -260,7 +262,7 @@ object SMC extends Runnable {
                maxX - SCREEN_BOUNDS.x + 1, ctrlF.getHeight() )
             ctrlF.setVisible( true )
 
-            val synPostMID = SMCNuages.synPostM.id
+            val synPostMID = Nuages.synPostM.id
             OSCResponder.add({
                case OSCMessage( "/meters", `synPostMID`, 0, values @ _* ) =>
                   EventQueue.invokeLater( new Runnable { def run = ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ]).toArray )})
@@ -274,19 +276,15 @@ object SMC extends Runnable {
    }
 
    private def initNuages( maxX: Int, maxY: Int ) {
-      val masterChans  = /* if( INTERNAL_AUDIO ) {
-//         new AudioBus( s, 0, 2 )
-         (0 until 2)
-      } else { */
-//         new AudioBus( s, MASTER_OFFSET, MASTER_NUMCHANNELS )
-         (MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS ))
-//      }
-//      val soloBus    = Bus.audio( s, 2 )
-//      val soloBus    = if( SOLO_OFFSET >= 0 ) Some( new AudioBus( s, SOLO_OFFSET, SOLO_NUMCHANNELS )) else None
-      val soloBus    = if( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0) ) Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) ) else None
-      config         = NuagesConfig( s, Some( masterChans ), soloBus, Some( REC_PATH ), true )
-      val f          = new NuagesFrame( config )
-      masterBus      = f.panel.masterBus.get // XXX not so elegant
+      val masterChans   = (MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS ))
+      val soloBus       = if( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0) ) {
+         Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) )
+      } else {
+         None
+      }
+      config            = NuagesConfig( s, Some( masterChans ), soloBus, Some( REC_PATH ), true, collector = USE_COLLECTOR )
+      val f             = new NuagesFrame( config )
+      masterBus         = f.panel.masterBus.get // XXX not so elegant
       f.panel.display.setHighQuality( NUAGES_ANTIALIAS )
       val y0 = SCREEN_BOUNDS.y + 22
       f.setBounds( SCREEN_BOUNDS.x, y0, maxX - SCREEN_BOUNDS.x, maxY - y0 )
@@ -294,7 +292,7 @@ object SMC extends Runnable {
 //      f.setAlwaysOnTop( true )
       f.setVisible( true )
       support.nuages = f
-      SMCNuages.init( s, f )
+      Nuages.init( s, f )
 
       FScapeNuages.init( s, f )
    }
@@ -311,7 +309,7 @@ object SMC extends Runnable {
          case TapesFrame.SelectionChanged( sel @ _* ) => {
             val pathO = sel.headOption.map( _.file.getAbsolutePath() ) 
 //println( "FS PATH = " + pathO )
-            SMCNuages.freesoundFile = pathO
+            Nuages.freesoundFile = pathO
          }
       }
       srf
@@ -339,7 +337,7 @@ object SMC extends Runnable {
                }
             }))
 println( "FS PATH = " + pathO )
-            SMCNuages.freesoundFile = pathO
+            Nuages.freesoundFile = pathO
          }
       }
 

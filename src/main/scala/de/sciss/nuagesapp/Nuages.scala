@@ -37,7 +37,7 @@ import collection.breakOut
 import osc.OSCResponder
 import ugen._
 import java.io.File
-import SMC._
+import Setup._
 import de.sciss.nuages.{NuagesPanel, NuagesFrame}
 import de.sciss.osc.OSCMessage
 import collection.immutable.{IndexedSeq => IIdxSeq}
@@ -45,7 +45,7 @@ import collection.immutable.{IndexedSeq => IIdxSeq}
 /**
  *    @version 0.11, 02-Oct-10
  */
-object SMCNuages extends TabletListener {
+object Nuages extends TabletListener {
    import DSL._
 //   import NuagesDSL._
 
@@ -134,7 +134,7 @@ object SMCNuages extends TabletListener {
 //      gen( "at_2aside" ) {
 //         val p1  = pAudio( "speed", ParamSpec( 0.1f, 10f, ExpWarp ), 1 )
 //         graph {
-//            val b   = bufCue( SMC.BASE_PATH + "sciss/2A-SideBlossCon2A-SideBloss.aif" )
+//            val b   = bufCue( Setup.BASE_PATH + "sciss/2A-SideBlossCon2A-SideBloss.aif" )
 //            HPF.ar( VDiskIn.ar( b.numChannels, b.id, p1.ar * BufRateScale.ir( b.id ), loop = 1 ), 30 )
 //         }
 //      }
@@ -238,7 +238,7 @@ object SMCNuages extends TabletListener {
 //          val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
 //
 //          graph {
-//             val off        = SMC.ROBERT_OFFSET // if( SMC.INTERNAL_AUDIO ) 0 else SMC.MIC_OFFSET
+//             val off        = Setup.ROBERT_OFFSET // if( Setup.INTERNAL_AUDIO ) 0 else Setup.MIC_OFFSET
 //             val boost      = pboost.ar
 //             val pureIn	   = In.ar( NumOutputBuses.ir + off, 2 ) * boost
 ////             val st: GE = pureIn :: pureIn :: Nil
@@ -755,101 +755,177 @@ object SMCNuages extends TabletListener {
 
       val chanConfigs = (("", 0, masterBus.numChannels) :: (/*if( INTERNAL_AUDIO ) Nil else */ MASTER_CHANGROUPS))
 
-    chanConfigs.zipWithIndex.foreach { tup =>
-      val ((suff, chanOff, numCh), idx) = tup
+      chanConfigs.zipWithIndex.foreach { tup =>
+         val ((suff, chanOff, numCh), idx) = tup
 
-      def placeChannels( sig: GE ) : GE = {
-         if( numCh == masterBus.numChannels ) sig else {
-            Vector.fill( chanOff )( Constant( 0 )) ++ sig.outputs ++ Vector.fill( masterBus.numChannels - (numCh + chanOff) )( Constant( 0 ))
-         }
-      }
-
-      diff( "O-all" + suff ) {
-          val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
-          val pout  = pAudioOut( "out", None )
-
-          graph { in =>
-             val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
-             val inChannels   = sig.size
-             val outChannels  = numCh
-             val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
-//             if( METERS ) Out.ar( masterBusIndex, outSig )
-             pout.ar( placeChannels( outSig ))
-          }
-      }
-
-      diff( "O-pan" + suff ) {
-         val pspread = pControl( "spr",  ParamSpec( 0.0, 1.0 ), 0.25 ) // XXX rand
-         val prota   = pControl( "rota", ParamSpec( 0.0, 1.0 ), 0.0 )
-         val pbase   = pControl( "azi",  ParamSpec( 0.0, 360.0 ), 0.0 )
-         val pamp    = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
-         val pout    = pAudioOut( "out", None )
-
-         graph { in =>
-            val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
-            val rotaAmt       = Lag.kr( prota.kr, 0.1 )
-            val spread        = Lag.kr( pspread.kr, 0.5 )
-            val inChannels   = in.numOutputs
-            val outChannels  = numCh
-//            val sig1         = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
-            val rotaSpeed     = 0.1
-            val inSig         = (in * Lag.ar( pamp.ar, 0.1 )).outputs
-            val noise         = LFDNoise1.kr( rotaSpeed ) * rotaAmt * 2
-            val outSig0: Array[ GE ] = Array.fill( outChannels )( 0 )
-            val altern        = false
-            for( inCh <- 0 until inChannels ) {
-               val pos0 = if( altern ) {
-                  (baseAzi / 180) + (inCh / outChannels * 2);
-               } else {
-                  (baseAzi / 180) + (inCh / inChannels * 2);
-               }
-               val pos = pos0 + noise
-
-               // + rota
-//				   w	 = inCh / (inChannels -1);
-//				   level = ((1 - levelMod) * w) + (1 - w);
-               val level   = 1   // (1 - w);
-               val width   = (spread * (outChannels - 2)) + 2
-               val pan     = PanAz.ar( outChannels, inSig( inCh ), pos, level, width, 0 )
-               pan.outputs.zipWithIndex.foreach( tup => {
-                  val (chanSig, i) = tup
-                  outSig0( i ) = outSig0( i ) + chanSig
-               })
+         def placeChannels( sig: GE ) : GE = {
+            if( numCh == masterBus.numChannels ) sig else {
+               Vector.fill( chanOff )( Constant( 0 )) ++ sig.outputs ++ Vector.fill( masterBus.numChannels - (numCh + chanOff) )( Constant( 0 ))
             }
-            val outSig = outSig0.toSeq
-//            if( METERS ) Out.ar( masterBusIndex, outSig )
-            pout.ar( placeChannels( outSig.toSeq ))
+         }
+
+         if( config.collector ) {
+            filter( "O-all" + suff ) {
+               val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
+
+               graph { in =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val inChannels   = sig.size
+                  val outChannels  = numCh
+                  val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  outSig: GE
+               }
+            }
+
+            filter( "O-pan" + suff ) {
+               val pspread = pControl( "spr",  ParamSpec( 0.0, 1.0 ), 0.25 ) // XXX rand
+               val prota   = pControl( "rota", ParamSpec( 0.0, 1.0 ), 0.0 )
+               val pbase   = pControl( "azi",  ParamSpec( 0.0, 360.0 ), 0.0 )
+               val pamp    = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
+
+               graph { in =>
+                  val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
+                  val rotaAmt       = Lag.kr( prota.kr, 0.1 )
+                  val spread        = Lag.kr( pspread.kr, 0.5 )
+                  val inChannels   = in.numOutputs
+                  val outChannels  = numCh
+                  val rotaSpeed     = 0.1
+                  val inSig         = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val noise         = LFDNoise1.kr( rotaSpeed ) * rotaAmt * 2
+                  val outSig0: Array[ GE ] = Array.fill( outChannels )( 0 )
+                  val altern        = false
+                  for( inCh <- 0 until inChannels ) {
+                     val pos0 = if( altern ) {
+                        (baseAzi / 180) + (inCh / outChannels * 2);
+                     } else {
+                        (baseAzi / 180) + (inCh / inChannels * 2);
+                     }
+                     val pos = pos0 + noise
+
+                     // + rota
+   //				   w	 = inCh / (inChannels -1);
+   //				   level = ((1 - levelMod) * w) + (1 - w);
+                     val level   = 1   // (1 - w);
+                     val width   = (spread * (outChannels - 2)) + 2
+                     val pan     = PanAz.ar( outChannels, inSig( inCh ), pos, level, width, 0 )
+                     pan.outputs.zipWithIndex.foreach( tup => {
+                        val (chanSig, i) = tup
+                        outSig0( i ) = outSig0( i ) + chanSig
+                     })
+                  }
+                  val outSig = outSig0.toSeq
+                  outSig: GE
+               }
+            }
+
+            filter( "O-rnd" + suff ) {
+               val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
+               val pfreq = pControl( "freq", ParamSpec( 0.01, 10, ExpWarp ), 0.1 )
+               val ppow  = pControl( "pow", ParamSpec( 1, 10 ), 2 )
+               val plag  = pControl( "lag", ParamSpec( 0.1, 10 ), 1 )
+
+               graph { in =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val inChannels   = sig.size
+                  val outChannels  = numCh
+                  val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  val freq         = pfreq.kr
+                  val lag          = plag.kr
+                  val pw           = ppow.kr
+                  val rands        = Lag.ar( TRand.ar( 0, 1, Dust.ar( List.fill( outChannels )( freq ))).pow( pw ), lag )
+                  val outSig       = sig1 * rands
+                  outSig
+               }
+            }
+
+         } else {
+            diff( "O-all" + suff ) {
+               val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
+               val pout  = pAudioOut( "out", None )
+
+               graph { in =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val inChannels   = sig.size
+                  val outChannels  = numCh
+                  val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
+   //             if( METERS ) Out.ar( masterBusIndex, outSig )
+                  pout.ar( placeChannels( outSig ))
+               }
+            }
+
+            diff( "O-pan" + suff ) {
+               val pspread = pControl( "spr",  ParamSpec( 0.0, 1.0 ), 0.25 ) // XXX rand
+               val prota   = pControl( "rota", ParamSpec( 0.0, 1.0 ), 0.0 )
+               val pbase   = pControl( "azi",  ParamSpec( 0.0, 360.0 ), 0.0 )
+               val pamp    = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
+               val pout    = pAudioOut( "out", None )
+
+               graph { in =>
+                  val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
+                  val rotaAmt       = Lag.kr( prota.kr, 0.1 )
+                  val spread        = Lag.kr( pspread.kr, 0.5 )
+                  val inChannels   = in.numOutputs
+                  val outChannels  = numCh
+   //            val sig1         = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  val rotaSpeed     = 0.1
+                  val inSig         = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val noise         = LFDNoise1.kr( rotaSpeed ) * rotaAmt * 2
+                  val outSig0: Array[ GE ] = Array.fill( outChannels )( 0 )
+                  val altern        = false
+                  for( inCh <- 0 until inChannels ) {
+                     val pos0 = if( altern ) {
+                        (baseAzi / 180) + (inCh / outChannels * 2);
+                     } else {
+                        (baseAzi / 180) + (inCh / inChannels * 2);
+                     }
+                     val pos = pos0 + noise
+
+                     // + rota
+   //				   w	 = inCh / (inChannels -1);
+   //				   level = ((1 - levelMod) * w) + (1 - w);
+                     val level   = 1   // (1 - w);
+                     val width   = (spread * (outChannels - 2)) + 2
+                     val pan     = PanAz.ar( outChannels, inSig( inCh ), pos, level, width, 0 )
+                     pan.outputs.zipWithIndex.foreach( tup => {
+                        val (chanSig, i) = tup
+                        outSig0( i ) = outSig0( i ) + chanSig
+                     })
+                  }
+                  val outSig = outSig0.toSeq
+   //            if( METERS ) Out.ar( masterBusIndex, outSig )
+                  pout.ar( placeChannels( outSig.toSeq ))
+               }
+            }
+
+            diff( "O-rnd" + suff ) {
+               val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
+               val pfreq = pControl( "freq", ParamSpec( 0.01, 10, ExpWarp ), 0.1 )
+               val ppow  = pControl( "pow", ParamSpec( 1, 10 ), 2 )
+               val plag  = pControl( "lag", ParamSpec( 0.1, 10 ), 1 )
+               val pout  = pAudioOut( "out", None )
+
+               graph { in =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val inChannels   = sig.size
+                  val outChannels  = numCh
+                  val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  val freq         = pfreq.kr
+                  val lag          = plag.kr
+                  val pw           = ppow.kr
+                  val rands        = Lag.ar( TRand.ar( 0, 1, Dust.ar( List.fill( outChannels )( freq ))).pow( pw ), lag )
+                  val outSig       = sig1 * rands
+   //             if( METERS ) Out.ar( masterBusIndex, outSig )
+                  pout.ar( placeChannels( outSig ))
+               }
+            }
          }
       }
-
-      diff( "O-rnd" + suff ) {
-          val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
-          val pfreq = pControl( "freq", ParamSpec( 0.01, 10, ExpWarp ), 0.1 )
-          val ppow  = pControl( "pow", ParamSpec( 1, 10 ), 2 )
-          val plag  = pControl( "lag", ParamSpec( 0.1, 10 ), 1 )
-          val pout  = pAudioOut( "out", None )
-
-          graph { in =>
-             val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
-             val inChannels   = sig.size
-             val outChannels  = numCh
-             val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
-             val freq         = pfreq.kr
-             val lag          = plag.kr
-             val pw           = ppow.kr
-             val rands        = Lag.ar( TRand.ar( 0, 1, Dust.ar( List.fill( outChannels )( freq ))).pow( pw ), lag )
-             val outSig       = sig1 * rands
-//             if( METERS ) Out.ar( masterBusIndex, outSig )
-             pout.ar( placeChannels( outSig ))
-          }
-      }
-    }
 
       diff( "O-mute" ) {
-          graph { in =>
-             val gagaism: GE = 0
-             gagaism
-          }
+         graph { in =>
+            val gagaism: GE = 0
+            gagaism
+         }
       }
 
       val dfPostM = SynthDef( "post-master" ) {
@@ -914,7 +990,7 @@ object SMCNuages extends TabletListener {
 //         new java.util.Timer().schedule( new TimerTask {
 //            def run {
                val inst = TabletWrapper.getInstance
-               inst.addTabletListener( SMCNuages )
+               inst.addTabletListener( Nuages )
 //               inst.removeTabletListener( this )
 //               inst.addTabletListener( this )
       println(" TABLET ")

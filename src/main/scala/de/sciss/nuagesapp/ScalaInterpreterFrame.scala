@@ -272,7 +272,7 @@ import support._
 
 //      val lp = new LogPane
 //      lp.init
-      pane.out = Some( SMC.logPane.writer )
+      pane.out = Some( Setup.logPane.writer )
 //      Console.setOut( lp.outputStream )
 //      Console.setErr( lp.outputStream )
 //      System.setErr( new PrintStream( lp.outputStream ))
