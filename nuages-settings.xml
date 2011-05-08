@@ -6,13 +6,13 @@
 <entry key="indevice">MOTU 828mk2</entry>
 <entry key="outdevice">MOTU 828mk2</entry>
 <!-- <entry key="masteroffset">14</entry> -->
-<entry key="masteroffset">0</entry>
+<entry key="masteroffset">2</entry>
 <!-- <entry key="masternumchans">5</entry> -->
 <entry key="masternumchans">4</entry>
 <!-- <entry key="masterchangroups">(q,0,4) (x,4,1)</entry> -->
 <!-- <entry key="micoffset">0</entry> -->
-<entry key="micchangroups">(m_at,14,2) (m_dpa,16,1)</entry>
-<entry key="peoplechangroups">(jonas,17,1) (ludger,18,2) (dincise,20,2)</entry>
+<entry key="micchangroups">(m_at,0,2) (m_dpa,14,1)</entry>
+<entry key="peoplechangroups">(jonas,16,2) (dincise,18,2) (ludger,20,2)</entry>
 <entry key="recchangroups"></entry>
 <entry key="solooffset">10</entry>
 <entry key="solonumchans">2</entry>

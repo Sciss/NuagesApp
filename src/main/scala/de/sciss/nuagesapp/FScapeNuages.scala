@@ -53,7 +53,7 @@ object FScapeNuages {
             val cnt0    = cnt
             cnt += 1
             val pathIn  = REC_PATH + fs + "fscin" + cnt + ".aif"
-            val pathOut = REC_PATH + fs + "_fsc" + cnt + ".aif"
+            val pathOut = REC_PATH + fs + /* "_fsc" */ "|fsc" + cnt + ".aif"
             val buf     = bufRecord( pathIn, in.numOutputs )
             DiskOut.ar( buf.id, in )
             val me      = Proc.local
