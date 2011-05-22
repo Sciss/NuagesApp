@@ -6,16 +6,15 @@ import sbt.{ FileUtilities => FU, _}
  *    @version 0.12, 21-Jul-10
  */
 class NuagesAppProject( info: ProjectInfo ) extends ProguardProject( info ) {
-   val wolkenpumpe         = "de.sciss" %% "wolkenpumpe" % "0.24"
+   val wolkenpumpe         = "de.sciss" %% "wolkenpumpe" % "0.25"
    val scalaFreesoundSwing = "de.sciss" %% "scalafreesoundswing" % "0.12"
 //   val tabletWrapper       = "tabletwrapper" % "tabletwrapper" % "0.12" from "http://github.com/downloads/Sciss/JNITablet/tabletwrapper-0.12.jar"
-   val fscapeJobs          = "de.sciss" %% "fscapejobs" % "0.13"
-
-   // for some reason, we need to add the snapshot repos here again...
-   val ccstmRepo           = "CCSTM Release Repository at PPL" at "http://ppl.stanford.edu/ccstm/repo-releases"
-   val ccstmSnap           = "CCSTM Snapshot Repository at PPL" at "http://ppl.stanford.edu/ccstm/repo-snapshots"
+   val fscapeJobs          = "de.sciss" %% "fscapejobs" % "0.14"
    val prefuse             = "prefuse" % "prefuse" % "beta-SNAPSHOT" from "http://github.com/downloads/Sciss/ScalaColliderSwing/prefuse-beta-SNAPSHOT.jar"
-   
+
+   // for some reason, we need to add the jsyntaxpane repo here again...
+   val repo1               = "Clojars Repository" at "http://clojars.org/repo"
+
    val camelCaseName          = "NuagesApp"
    def appBundleName          = camelCaseName + ".app"
    def appBundleContentsPath  = appBundleName / "Contents"

@@ -43,13 +43,13 @@
 		<string>1.6+</string>
 		<key>ClassPath</key>
 		<array>
-			<string>$JAVAROOT/ccstm.jar</string>
-			<string>$JAVAROOT/nuagesapp.jar</string>
 			<string>$JAVAROOT/fscapejobs.jar</string>
 			<string>$JAVAROOT/jsyntaxpane.jar</string>
+			<string>$JAVAROOT/nuagesapp.jar</string>
 			<string>$JAVAROOT/prefuse.jar</string>
 			<string>$JAVAROOT/scala-compiler.jar</string>
 			<string>$JAVAROOT/scala-library.jar</string>
+			<string>$JAVAROOT/scala-stm_2.9.0-0.3.jar</string>
 			<string>$JAVAROOT/scalaaudiofile.jar</string>
 			<string>$JAVAROOT/scalacollider.jar</string>
 			<string>$JAVAROOT/scalacolliderswing.jar</string>
