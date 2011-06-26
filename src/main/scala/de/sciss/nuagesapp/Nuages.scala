@@ -803,7 +803,7 @@ object Nuages extends TabletListener {
                   val inChannels   = sig.size
                   val outChannels  = numCh
                   val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
-                  outSig: GE
+                  placeChannels( outSig )
                }
             }
 
@@ -844,7 +844,7 @@ object Nuages extends TabletListener {
                      })
                   }
                   val outSig = outSig0.toSeq
-                  outSig: GE
+                  placeChannels( outSig )
                }
             }
 
@@ -864,12 +864,12 @@ object Nuages extends TabletListener {
                   val pw           = ppow.kr
                   val rands        = Lag.ar( TRand.ar( 0, 1, Dust.ar( List.fill( outChannels )( freq ))).pow( pw ), lag )
                   val outSig       = sig1 * rands
-                  outSig
+                  placeChannels( outSig )
                }
             }
 
          } else {
-            diff( "O-all" + suff ) {
+           diff( "O-all" + suff ) {
                val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
                val pout  = pAudioOut( "out", None )
 

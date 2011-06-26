@@ -2,19 +2,18 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
 <comment>Nuages Settings</comment>
-<entry key="basepath">/Users/hhrutz/Desktop/L129</entry>
+<entry key="basepath">/Users/hhrutz/Desktop/CafeConcrete</entry>
 <entry key="indevice">MOTU 828mk2</entry>
 <entry key="outdevice">MOTU 828mk2</entry>
 <!-- <entry key="masteroffset">14</entry> -->
 <entry key="masteroffset">2</entry>
-<!-- <entry key="masternumchans">5</entry> -->
-<entry key="masternumchans">4</entry>
-<!-- <entry key="masterchangroups">(q,0,4) (x,4,1)</entry> -->
+<entry key="masternumchans">9</entry>
+<entry key="masterchangroups">(t,0,3) (c,3,3) (m,6,3)</entry>
 <!-- <entry key="micoffset">0</entry> -->
 <entry key="micchangroups">(m_at,0,2) (m_dpa,14,1)</entry>
-<entry key="peoplechangroups">(jonas,16,2) (dincise,18,2) (ludger,20,2)</entry>
+<!-- <entry key="peoplechangroups">(jonas,16,2) (dincise,18,2) (ludger,20,2)</entry> -->
 <entry key="recchangroups"></entry>
-<entry key="solooffset">10</entry>
+<entry key="solooffset">0</entry>
 <entry key="solonumchans">2</entry>
 <entry key="collector">true</entry>
 </properties>
