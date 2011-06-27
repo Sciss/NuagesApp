@@ -295,19 +295,21 @@ object Nuages extends TabletListener {
       }
 
       gen( "~gray" ) {
-          graph {
-             GrayNoise.ar( 1 :: 1 :: Nil )
-          }
+         val pamp = pAudio( "amp", ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
+         graph {
+            GrayNoise.ar( 1 :: 1 :: Nil ) * pamp.ar
+         }
       }
 
       gen( "~sin" ) {
          val pfreq1 = pAudio( "freq", ParamSpec( 0.1, 10000, ExpWarp ), 15 /* 1 */)
          val pfreq2 = pAudio( "freq-fact", ParamSpec( 0.01, 100, ExpWarp ), 1 /* 1 */)
+         val pamp = pAudio( "amp", ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
 
           graph {
              val f1 = pfreq1.ar
              val f2 = f1 * pfreq2.ar
-             SinOsc.ar( f1 :: f2 :: Nil )                                                                                                    
+             SinOsc.ar( f1 :: f2 :: Nil ) * pamp.ar
           }
       }
 
@@ -316,13 +318,14 @@ object Nuages extends TabletListener {
          val pfreq2 = pAudio( "freq-fact", ParamSpec( 0.01, 100, ExpWarp ), 1 /* 1 */)
          val pw1 = pAudio( "width1", ParamSpec( 0.0, 1.0 ), 0.5 )
          val pw2 = pAudio( "width2", ParamSpec( 0.0, 1.0 ), 0.5 )
+         val pamp = pAudio( "amp", ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
 
           graph {
              val f1 = pfreq1.ar
              val f2 = f1 * pfreq2.ar
              val w1 = pw1.ar
              val w2 = pw2.ar
-             Pulse.ar( f1 :: f2 :: Nil, w1 :: w2 :: Nil )
+             Pulse.ar( f1 :: f2 :: Nil, w1 :: w2 :: Nil ) * pamp.ar
           }
       }
 
@@ -508,6 +511,39 @@ object Nuages extends TabletListener {
             val freq    = pfreq.ar
             val freqHz  = freq.abs.linexp( 0, 1, 20, 12000 ) * freq.signum
             val flt     = FreqShift.ar( in, freqHz )
+            mix( in, flt, pmix )
+         }
+      }
+
+      filter( "reso" ) {
+//         val pfreq   = pAudio( "freq", ParamSpec( -1, 1 ), 0.54 ) // check dis out other time -- interesting stuff going on :)
+         val pfreq   = pAudio( "freq", ParamSpec( 30, 13000, ExpWarp ), 400 )  // beware of the upper frequency
+         val pfreq2  = pAudio( "freq-fact", ParamSpec( 0.5, 2, ExpWarp ), 1 )
+         val pq      = pAudio( "q", ParamSpec( 0.5, 50, ExpWarp ), 1 )
+         val pmix    = pMix
+
+         graph { in =>
+            val freq0   = pfreq.ar
+            val freq    = freq0 :: (freq0 * pfreq2.ar).max( 30 ).min( 13000 ) :: Nil
+            val rq      = pq.ar.reciprocal
+            val makeUp  = (rq + 0.5).pow( 1.41 ) // rq.max( 1 ) // .sqrt
+            val flt     = Resonz.ar( in, freq, rq ) * makeUp
+            mix( in, flt, pmix )
+         }
+      }
+
+      filter( "notch" ) {
+         val pfreq   = pAudio( "freq", ParamSpec( 30, 16000, ExpWarp ), 400 )
+         val pfreq2  = pAudio( "freq-fact", ParamSpec( 0.5, 2, ExpWarp ), 1 )
+         val pq      = pAudio( "q", ParamSpec( 1, 50, ExpWarp ), 1 )       // beware of the lower q
+         val pmix    = pMix
+
+         graph { in =>
+            val freq0   = pfreq.ar
+            val freq    = freq0 :: (freq0 * pfreq2.ar).max( 30 ).min( 16000 ) :: Nil
+            val rq      = pq.ar.reciprocal
+//            val makeUp  = (rq + 0.5).pow( 1.41 ) // rq.max( 1 ) // .sqrt
+            val flt     = BRF.ar( in, freq, rq )
             mix( in, flt, pmix )
          }
       }
