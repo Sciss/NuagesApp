@@ -41,6 +41,9 @@ import Setup._
 import de.sciss.nuages.{NuagesPanel, NuagesFrame}
 import de.sciss.osc.OSCMessage
 import collection.immutable.{IndexedSeq => IIdxSeq}
+import de.sciss.synth.io.{AudioFileType, SampleFormat}
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 /**
  *    @version 0.11, 02-Oct-10
@@ -52,8 +55,10 @@ object Nuages extends TabletListener {
    var freesoundFile : Option[ String ] = None
    var f : NuagesFrame = null
    var synPostM : Synth = null
+   var server : Server = null
 
    def init( s: Server, f: NuagesFrame ) = ProcTxn.atomic { implicit tx =>
+      server = s
       // -------------- GENERATORS --------------
 
       // NuagesUMic
@@ -958,6 +963,17 @@ object Nuages extends TabletListener {
          }
       }
 
+      gen( "$mitschnitt" ) {
+         val df = new SimpleDateFormat( "'rec'yyMMdd'_'HHmmss'.w64'", Locale.US )
+         graph {
+            val in = In.ar( masterBus.index, masterBus.numChannels )
+            val recPath = new File( new File( REC_PATH, "mitschnitt" ), df.format( new java.util.Date() ))
+//            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.IRCAM ).id, in )
+            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.Wave64, SampleFormat.Int24 ).id, in )
+            0.0  // this sucks...
+         }
+      }
+
       val dfPostM = SynthDef( "post-master" ) {
          val sig = In.ar( masterBus.index, masterBus.numChannels )
          // externe recorder
@@ -1127,6 +1143,29 @@ object Nuages extends TabletListener {
          println( "  vendorID                   " + e.getVendorID )
          println( "  vendorPointingDeviceType   " + e.getVendorPointingDeviceType )
          println()
+      }
+   }
+
+   private val mitRef = Ref( Option.empty[ Proc ])
+   def startRecorder( implicit tx: ProcTxn ) : Boolean = {
+      if( mitRef().isDefined ) return false
+      val p = factory( "$mitschnitt" ).make
+      val g = RichGroup( Group( server ))
+      g.play( RichGroup.default( server ), addAfter )
+      p.group = g
+      p.play
+      mitRef.set( Some( p ))
+      true
+   }
+
+   def stopRecorder( implicit tx: ProcTxn ) : Boolean = {
+      mitRef.swap( None ) match {
+         case Some( p ) =>
+            p.stop
+            p.dispose
+            p.group.free( false )
+            true
+         case None => false
       }
    }
 }

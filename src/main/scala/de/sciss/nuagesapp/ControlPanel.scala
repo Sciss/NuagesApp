@@ -6,9 +6,10 @@ import Setup._
 import de.sciss.scalainterpreter.LogPane
 import java.io.PrintStream
 import javax.swing.{JComponent, JLabel, WindowConstants, SwingConstants, Box, JToggleButton, BoxLayout, JFrame, JButton, JPanel}
-import java.awt.{Point, Font, Color, BorderLayout}
 import javax.swing.plaf.basic.BasicToggleButtonUI
 import de.sciss.nuages.{BasicToggleButton, BasicPanel, BasicButton}
+import de.sciss.synth.proc.ProcTxn
+import java.awt.{EventQueue, Point, Font, Color, BorderLayout}
 
 class ControlPanel /* ( tapesPanel: JComponent ) */ extends BasicPanel {
    panel =>
@@ -20,8 +21,39 @@ class ControlPanel /* ( tapesPanel: JComponent ) */ extends BasicPanel {
    
    private var interpreter : Option[ ScalaInterpreterFrame ] = None
 
+   private val ggClock = new Wallclock
+
+   private def space( width: Int = 8 ) {
+      panel.add( Box.createHorizontalStrut( width ))
+   }
+
    {
       panel.setLayout( new BoxLayout( panel, BoxLayout.X_AXIS ))
+
+      val ggRecStart = BasicButton( "\u25B6" ) {
+         ProcTxn.spawnAtomic { implicit tx =>
+            if( Nuages.startRecorder ) tx.afterCommit( _ => defer {
+               ggClock.reset()
+               ggClock.start()
+            })
+         }
+      }
+      ggRecStart.setBackground( Color.black )
+      ggRecStart.setForeground( Color.white )
+      panel.add( ggRecStart )
+      val ggRecStop = BasicButton( "\u25FC" ) {
+         ProcTxn.spawnAtomic { implicit tx =>
+            Nuages.stopRecorder
+            tx.afterCommit( _ => defer {
+               ggClock.stop()
+            })
+         }
+      }
+      ggRecStop.setBackground( Color.black )
+      ggRecStop.setForeground( Color.white )
+      panel.add( ggRecStop )
+      panel.add( ggClock )
+      space()
 
 //      val ggTapes = new JToggleButton( "Tapes" )
 //      ggTapes.setUI( new BasicToggleButtonUI )
@@ -82,9 +114,9 @@ class ControlPanel /* ( tapesPanel: JComponent ) */ extends BasicPanel {
       val d1 = logPane.getPreferredSize
       d1.height = d.height
       logPane.setPreferredSize( d1 )
-      panel.add( Box.createHorizontalStrut( 8 ))
+      space()
       panel.add( logPane )
-      panel.add( Box.createHorizontalStrut( 16 ))
+//      space( 16 )
 
       val glue = Box.createHorizontalGlue()
 glue.setBackground( Color.black )
@@ -114,6 +146,8 @@ glue.setBackground( Color.black )
       }
       panel.add( ggInterp )
    }
+
+   private def defer( code: => Unit ) { EventQueue.invokeLater( new Runnable { def run() { code }})}
 
    def makeWindow : JFrame = makeWindow()
    def makeWindow( undecorated: Boolean = true ) : JFrame = {
