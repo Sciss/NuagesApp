@@ -52,6 +52,10 @@ object Nuages extends TabletListener {
    import DSL._
 //   import NuagesDSL._
 
+   val GAGA6000      = true
+   val GAGA_THRESH   = -18
+   val GAGA_RATIO    = 1.0 / 10
+
    var freesoundFile : Option[ String ] = None
    var f : NuagesFrame = null
    var synPostM : Synth = null
@@ -964,12 +968,13 @@ object Nuages extends TabletListener {
       }
 
       gen( "$mitschnitt" ) {
-         val df = new SimpleDateFormat( "'rec'yyMMdd'_'HHmmss'.w64'", Locale.US )
+         val df = new SimpleDateFormat( "'rec'yyMMdd'_'HHmmss'.irc'", Locale.US )
          graph {
-            val in = In.ar( masterBus.index, masterBus.numChannels )
+//            val in = In.ar( masterBus.index, masterBus.numChannels )
+            val in = In.ar( MASTER_OFFSET, MASTER_NUMCHANNELS )
             val recPath = new File( new File( REC_PATH, "mitschnitt" ), df.format( new java.util.Date() ))
 //            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.IRCAM ).id, in )
-            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.Wave64, SampleFormat.Int24 ).id, in )
+            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.IRCAM, SampleFormat.Float ).id, in )
             0.0  // this sucks...
          }
       }
@@ -1029,6 +1034,18 @@ object Nuages extends TabletListener {
          SendReply.kr( meterTr,  meterData, "/meters" )
       }
       synPostM = dfPostM.play( s, addAction = addToTail )
+
+      if( GAGA6000 ) {
+         require( MASTER_NUMCHANNELS == 8 )
+         val eqDef = SynthDef( "eq" ) {
+            val sig     = In.ar( MASTER_OFFSET, 6 )
+            val trnsIn  = HPF.ar( sig.outputs.take( 3 ), 60 )
+            val jbl     = HPF.ar( sig.outputs.drop( 3 ), 30 )
+            val trns    = Compander.ar( trnsIn, trnsIn, GAGA_THRESH.dbamp, ratioAbove = GAGA_RATIO, attack = 0.01, release = 0.1 )
+            ReplaceOut.ar( MASTER_OFFSET, trns.outputs ++ jbl.outputs )
+         }
+         eqDef.play( s, addAction = addAfter )
+      }
 
       // tablet
       this.f = f
