@@ -40,12 +40,13 @@ import actors.DaemonActor
 import osc.OSCResponder
 import de.sciss.osc.OSCMessage
 import de.sciss.scalainterpreter.LogPane
-import java.awt.{Font, EventQueue, GraphicsEnvironment}
-import javax.swing.{JScrollPane, JComponent, JFrame, Box, WindowConstants}
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, PrintStream, FilenameFilter, File, RandomAccessFile}
 import de.sciss.nuages.{NuagesPanel, NuagesConfig, NuagesFrame}
 import java.awt.geom.Point2D
+import java.awt.event.{ActionEvent, KeyEvent}
+import java.awt.{Point, Toolkit, Font, EventQueue, GraphicsEnvironment}
+import javax.swing.{AbstractAction, KeyStroke, JScrollPane, JComponent, JFrame, Box, WindowConstants}
 
 /**
  *    @version 0.12, 02-Oct-10
@@ -91,7 +92,7 @@ object Setup extends Runnable {
       if( file.isFile ) {
          val is = new FileInputStream( file )
          prop.loadFromXML( is )
-         is.close
+         is.close()
       } else {
          prop.setProperty( PROP_BASEPATH,
             new File( new File( System.getProperty( "user.home" ), "Desktop" ), "Nuages" ).getAbsolutePath )
@@ -109,7 +110,7 @@ object Setup extends Runnable {
          prop.setProperty( PROP_PEOPLECHANGROUPS, "" )
          val os = new FileOutputStream( file )
          prop.storeToXML( os, "Nuages Settings" )
-         os.close
+         os.close()
       }
       prop
    }
@@ -199,7 +200,7 @@ object Setup extends Runnable {
       res.init
       val scroll = res.getComponent( 0 ).asInstanceOf[ JScrollPane ]
       scroll.setBorder( null )
-      scroll.getViewport().getView().setFont( new Font( "Menlo", Font.PLAIN, 8 ))
+      scroll.getViewport.getView.setFont( new Font( "Menlo", Font.PLAIN, 8 ))
       val printStream = new PrintStream( res.outputStream )
       System.setErr( printStream )
       System.setOut( printStream )
@@ -245,39 +246,40 @@ object Setup extends Runnable {
             initNuages( maxX, maxY )
 
             // freesound
-            val filesFrame = if( FREESOUND ) {
-               val cred  = new RandomAccessFile( BASE_PATH + fs + "cred.txt", "r" )
-               val credL = cred.readLine().split( ":" )
-               cred.close()
-               initFreesound( credL( 0 ), credL( 1 ))
-            } else {
-               newTapesFrame
-            }
-            val ctrlP = new ControlPanel( filesFrame )
-//      val cf = ctrlP.makeWindow
-            val ctrlF = new JFrame()
-            ctrlF.setUndecorated( true )
-            val ctrlB = Box.createHorizontalBox()
+//            val filesPanel =
+//               if( FREESOUND ) {
+//               val cred  = new RandomAccessFile( BASE_PATH + fs + "cred.txt", "r" )
+//               val credL = cred.readLine().split( ":" )
+//               cred.close()
+//               initFreesound( credL( 0 ), credL( 1 ))
+//            } else {
+               installTapesPanel
+//            }
+            val ctrlP = new ControlPanel // ( filesPanel )
+//            val ctrlF = new JFrame()
+//            ctrlF.setUndecorated( true )
+//            val ctrlB = Box.createHorizontalBox()
+            val ctrlB = Nuages.f.bottom
             ctrlB.add( ssp )
             ctrlB.add( Box.createHorizontalStrut( 8 ))
             ctrlB.add( ctrlP )
             ctrlB.add( Box.createHorizontalStrut( 4 ))
-            ctrlF.setContentPane( ctrlB )
-            ctrlF.pack()
-            ctrlF.setBounds( SCREEN_BOUNDS.x - 1, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - ctrlF.getHeight() + 2,
-               maxX - SCREEN_BOUNDS.x + 1, ctrlF.getHeight() )
-            ctrlF.setVisible( true )
+//            ctrlF.setContentPane( ctrlB )
+//            ctrlF.pack()
+//            ctrlF.setBounds( SCREEN_BOUNDS.x - 1, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - ctrlF.getHeight() + 2,
+//               maxX - SCREEN_BOUNDS.x + 1, ctrlF.getHeight() )
+//            ctrlF.setVisible( true )
 
             val synPostMID = Nuages.synPostM.id
             OSCResponder.add({
                case OSCMessage( "/meters", `synPostMID`, 0, values @ _* ) =>
-                  EventQueue.invokeLater( new Runnable { def run = ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ]).toArray )})
+                  EventQueue.invokeLater( new Runnable { def run() { ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ]).toArray )}})
             }, s )
 
             FScapeNuages.fsc.connect()( succ => println( if( succ ) "FScape connected." else "!ERROR! : FScape not connected" ))
          }
       }
-      Runtime.getRuntime().addShutdownHook( new Thread { override def run = shutDown })
+      Runtime.getRuntime.addShutdownHook( new Thread { override def run() = shutDown() })
 //      booting.start
    }
 
@@ -307,22 +309,34 @@ object Setup extends Runnable {
       FScapeNuages.init( s, f )
    }
 
-   private def newTapesFrame : JFrame = {
-      val srf = TapesFrame.fromFolder( new File( TAPES_PATH ))
-//      srf.setLocationRelativeTo( null )
-      srf.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
-      srf.setAlwaysOnTop( true )
-      srf.setLocation( SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - (srf.getWidth() + 256),
-         SCREEN_BOUNDS.y + ((SCREEN_BOUNDS.height - srf.getHeight) >> 1) )
-//      srf.setVisible( true )
-      srf.addListener {
-         case TapesFrame.SelectionChanged( sel @ _* ) => {
-            val pathO = sel.headOption.map( _.file.getAbsolutePath() ) 
+   private def installTapesPanel : JComponent = {
+      val tapes = TapesPanel.fromFolder( new File( TAPES_PATH ))
+//      tapes.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
+//      tapes.setAlwaysOnTop( true )
+//      tapes.setLocation( SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - (tapes.getWidth + 256),
+//         SCREEN_BOUNDS.y + ((SCREEN_BOUNDS.height - tapes.getHeight) >> 1) )
+      tapes.addListener {
+         case TapesPanel.SelectionChanged( sel @ _* ) => {
+            val pathO = sel.headOption.map( _.file.getAbsolutePath )
 //println( "FS PATH = " + pathO )
             Nuages.freesoundFile = pathO
          }
       }
-      srf
+
+      val p       = Nuages.f.panel
+      val imap    = p.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW )
+      val amap    = p.getActionMap
+      val tpName  = "tapes"
+      imap.put( KeyStroke.getKeyStroke( KeyEvent.VK_T, Toolkit.getDefaultToolkit.getMenuShortcutKeyMask ), tpName )
+      amap.put( tpName, new AbstractAction( tpName ) {
+         def actionPerformed( e: ActionEvent ) {
+            val x = (p.getWidth - tapes.getWidth) >> 1
+            val y = (p.getHeight - tapes.getHeight) >> 1
+            p.showOverlayPanel( tapes, new Point( x, y ))
+         }
+      })
+
+      tapes
    }
 
    private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],
@@ -393,7 +407,7 @@ println( "FS PATH = " + pathO )
       }
       if( FREESOUND_OFFLINE ) {
          val samples: IIdxSeq[ Sample ] = new File( icachePath ).listFiles().map({ f =>
-            val n = f.getName()
+            val n = f.getName
             if( n.startsWith( "info" ) && n.endsWith( ".xml" )) {
                val mid = n.substring( 4, n.length() - 4 )
                try {
@@ -410,7 +424,7 @@ println( "FS PATH = " + pathO )
       f
    }
 
-   private def shutDown { // sync.synchronized { }
+   private def shutDown() { // sync.synchronized { }
       if( (s != null) && (s.condition != Server.Offline) ) {
          s.quit
          s = null
