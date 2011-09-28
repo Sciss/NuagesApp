@@ -52,7 +52,7 @@ object Nuages extends TabletListener {
    import DSL._
 //   import NuagesDSL._
 
-   val GAGA6000      = true
+   val GAGA6000      = false
    val GAGA_THRESH   = -18
    val GAGA_RATIO    = 1.0 / 10
 
