@@ -1,10 +1,7 @@
 package de.sciss.nuagesapp
 
-import de.sciss.scalainterpreter.{ LogPane, ScalaInterpreterPane }
-import de.sciss.synth.Server
-import tools.nsc.Interpreter
-import java.io.PrintStream
-import de.sciss.synth.swing.NodeTreePanel
+import de.sciss.scalainterpreter.ScalaInterpreterPane
+import tools.nsc.interpreter.NamedParam
 import java.awt.event.KeyEvent
 import java.awt.{Toolkit, GraphicsEnvironment}
 import javax.swing._
@@ -29,8 +26,8 @@ extends JFrame( "Scala Interpreter" ) {
       val cp = getContentPane
 
       pane.initialText = pane.initialText +
-"""// Press '""" + KeyEvent.getKeyModifiersText( txnKeyStroke.getModifiers() ) + " + " +
-      KeyEvent.getKeyText( txnKeyStroke.getKeyCode() ) + """' to execute transactionally.
+"""// Press '""" + KeyEvent.getKeyModifiersText( txnKeyStroke.getModifiers ) + " + " +
+      KeyEvent.getKeyText( txnKeyStroke.getKeyCode ) + """' to execute transactionally.
 
 val pBub = gen( "bubbles2" ) {
    val f1  = pAudio( "f1", ParamSpec( 0.1f, 10, ExpWarp ), 0.4f )
@@ -259,16 +256,7 @@ import support._
 """
       )
 
-      pane.bindingsCreator = Some( (in: Interpreter ) => {
-//         sync.synchronized {
-//            interpreter = Some( in )
-//println( "bindingsCreator " + inCode.isDefined )
-//            inCode.foreach( _.apply( in ))
-//         }
-         in.bind( "support", classOf[ REPLSupport ].getName, support )
-//         in.bind( "ntp", classOf[ NodeTreePanel ].getName, ntp )
-//         in.bind( "in", classOf[ Interpreter ].getName, in )
-      })
+      pane.customBindings = Seq( NamedParam( "support", support ))
 
 //      val lp = new LogPane
 //      lp.init
@@ -277,7 +265,7 @@ import support._
 //      Console.setErr( lp.outputStream )
 //      System.setErr( new PrintStream( lp.outputStream ))
 
-      pane.customKeyMapActions += txnKeyStroke -> (() => txnExecute)
+      pane.customKeyMapActions += txnKeyStroke -> (() => txnExecute())
 
       pane.init
 //      val sp = new JSplitPane( SwingConstants.HORIZONTAL )
@@ -296,7 +284,7 @@ import support._
 
    private var txnCount = 0
 
-   def txnExecute {
+   def txnExecute() {
       pane.getSelectedTextOrCurrentLine.foreach( txt => {
          val txnId  = txnCount
          txnCount += 1

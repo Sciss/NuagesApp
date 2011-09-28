@@ -1,8 +1,8 @@
 /*
- *  SMCNuages.scala
- *  (Cupola)
+ *  Nuages.scala
+ *  (NuagesApp)
  *
- *  Copyright (c) 2010 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2010-2011 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -28,18 +28,19 @@
 
 package de.sciss.nuagesapp
 
-import de.sciss.synth.{ EnvSeg => S, _ }
-import de.sciss.synth.proc._
+import de.sciss.synth._
+import Env.{Seg => S}
+import ugen._
+import proc._
 import com.jhlabs.jnitablet.{TabletProximityEvent, TabletEvent, TabletListener, TabletWrapper}
 import java.util.TimerTask
 import java.awt.event.MouseEvent
 import collection.breakOut
 import osc.OSCResponder
-import ugen._
 import java.io.File
 import Setup._
 import de.sciss.nuages.{NuagesPanel, NuagesFrame}
-import de.sciss.osc.OSCMessage
+import de.sciss.osc.Message
 import collection.immutable.{IndexedSeq => IIdxSeq}
 import de.sciss.synth.io.{AudioFileType, SampleFormat}
 import java.text.SimpleDateFormat
@@ -52,7 +53,7 @@ object Nuages extends TabletListener {
    import DSL._
 //   import NuagesDSL._
 
-   val GAGA6000      = false
+//   val GAGA6000      = false
    val GAGA_THRESH   = -18
    val GAGA_RATIO    = 1.0 / 10
 
@@ -75,7 +76,7 @@ object Nuages extends TabletListener {
          val ploop   = pScalar( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
          val ppos    = pScalar( "pos", ParamSpec( 0, 1 ), 0 )
          graph {
-            val path      = freesoundFile.getOrElse( error( "No audiofile selected" ))
+            val path      = freesoundFile.getOrElse( sys.error( "No audiofile selected" ))
             val spec      = audioFileSpec( path )
             val numFrames = spec.numFrames
             val startPos  = ppos.v
@@ -102,8 +103,8 @@ object Nuages extends TabletListener {
                }
             }}
 
-            val sig    = VDiskIn.ar( numCh, b.id, speed, loop = ploop.ir ).outputs.take(2)
-            if( numCh == 1 ) List( sig( 0 ), sig( 0 )) else sig
+            val disk = VDiskIn.ar( numCh, b.id, speed, loop = ploop.ir )
+            WrapExtendChannels( 2, disk )
          }
       }
 
@@ -131,10 +132,11 @@ object Nuages extends TabletListener {
          val psig    = pControl( "sig",  ParamSpec( 0, 1, LinWarp, 1 ), 0 )
          val pfreq   = pControl( "freq", ParamSpec( 0.1, 10, ExpWarp ), 1 )
          graph {
-            val idx = Stepper.kr( Impulse.kr( pfreq.kr ), min = 0, max = masterBus.numChannels )
-            val sigs: GE = (WhiteNoise.ar( 1 ) \ 0) :: (SinOsc.ar( 441 ) \ 0) :: Nil
+            val idx = Stepper.kr( Impulse.kr( pfreq.kr ), lo = 0, hi = masterBus.numChannels )
+//            val sigs: GE = (WhiteNoise.ar( 1 ) \ 0) :: (SinOsc.ar( 441 ) \ 0) :: Nil
+            val sigs: GE = Seq( WhiteNoise.ar( 1 ), SinOsc.ar( 441 ))
             val sig = Select.ar( psig.kr, sigs ) * pamp.kr
-            val sigOut: GE = Vector.tabulate( masterBus.numChannels )( ch => sig * (1 - (ch - idx).abs.min( 1 )))
+            val sigOut: GE = IndexedSeq.tabulate( masterBus.numChannels )( ch => sig * (1 - (ch - idx).abs.min( 1 )))
 //            val sigOut: GE = Vector.tabulate( 2 )( ch => sig * (1 - (ch - idx).abs.min( 1 )))
             sigOut
          }
@@ -214,21 +216,22 @@ object Nuages extends TabletListener {
                } else if( numIn == 1 ) {
                   Vector.fill[ GE ]( numOut )( sig )
                } else {
-                  val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
-                  val sca     = (numOut - 1).toFloat / (numIn - 1)
-                  sig.outputs.zipWithIndex.foreach { tup =>
-                     val (sigIn, inCh) = tup
-                     val outCh         = inCh * sca
-                     val fr            = outCh % 1f
-                     val outChI        = outCh.toInt
-                     if( fr == 0f ) {
-                        sigOut( outChI ) += sigIn
-                     } else {
-                        sigOut( outChI )     += sigIn * (1 - fr).sqrt
-                        sigOut( outChI + 1 ) += sigIn * fr.sqrt
-                     }
-                  }
-                  sigOut.toSeq
+//                  val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
+//                  val sca     = (numOut - 1).toFloat / (numIn - 1)
+//                  sig.outputs.zipWithIndex.foreach { tup =>
+//                     val (sigIn, inCh) = tup
+//                     val outCh         = inCh * sca
+//                     val fr            = outCh % 1f
+//                     val outChI        = outCh.toInt
+//                     if( fr == 0f ) {
+//                        sigOut( outChI ) += sigIn
+//                     } else {
+//                        sigOut( outChI )     += sigIn * (1 - fr).sqrt
+//                        sigOut( outChI + 1 ) += sigIn * fr.sqrt
+//                     }
+//                  }
+//                  sigOut.toSeq
+                  SplayAz.ar( numOut, sig )
                }
                assert( sig1.numOutputs == numOut )
                sig1
@@ -249,21 +252,22 @@ object Nuages extends TabletListener {
                } else if( numIn == 1 ) {
                   Vector.fill[ GE ]( numOut )( sig )
                } else {
-                  val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
-                  val sca     = (numOut - 1).toFloat / (numIn - 1)
-                  sig.outputs.zipWithIndex.foreach { tup =>
-                     val (sigIn, inCh) = tup
-                     val outCh         = inCh * sca
-                     val fr            = outCh % 1f
-                     val outChI        = outCh.toInt
-                     if( fr == 0f ) {
-                        sigOut( outChI ) += sigIn
-                     } else {
-                        sigOut( outChI )     += sigIn * (1 - fr).sqrt
-                        sigOut( outChI + 1 ) += sigIn * fr.sqrt
-                     }
-                  }
-                  sigOut.toSeq
+//                  val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
+//                  val sca     = (numOut - 1).toFloat / (numIn - 1)
+//                  sig.outputs.zipWithIndex.foreach { tup =>
+//                     val (sigIn, inCh) = tup
+//                     val outCh         = inCh * sca
+//                     val fr            = outCh % 1f
+//                     val outChI        = outCh.toInt
+//                     if( fr == 0f ) {
+//                        sigOut( outChI ) += sigIn
+//                     } else {
+//                        sigOut( outChI )     += sigIn * (1 - fr).sqrt
+//                        sigOut( outChI + 1 ) += sigIn * fr.sqrt
+//                     }
+//                  }
+//                  sigOut.toSeq
+                  SplayAz.ar( numOut, sig )
                }
                assert( sig1.numOutputs == numOut )
                sig1
@@ -339,13 +343,15 @@ object Nuages extends TabletListener {
          graph {
             val in      = InFeedback.ar( masterBus.index, masterBus.numChannels )
             val w       = 2.0 / in.numOutputs
-            var sig     = Array[ GE ]( 0, 0 )
-            in.outputs.zipWithIndex.foreach( tup => {
-               val (add, ch) = tup
-               sig( ch % 2 ) += add
-            })
+//            var sig     = Array[ GE ]( 0, 0 )
+//            in.outputs.zipWithIndex.foreach( tup => {
+//               val (add, ch) = tup
+//               sig( ch % 2 ) += add
+//            })
+            val sig     = SplayAz.ar( 2, in )
+
 //            val sig1    = sig.toSeq * w
-            val sig1    = LeakDC.ar( Limiter.ar( sig.toSeq * w ))
+            val sig1    = LeakDC.ar( Limiter.ar( sig /* .toSeq */ * w ))
             val bufID   = Select.kr( pbuf.kr, loopBufIDs )
             val feed    = pfeed.kr
             val prelvl  = feed.sqrt
@@ -368,7 +374,6 @@ object Nuages extends TabletListener {
 
             Done.kr( rec ).react { ProcTxn.spawnAtomic { implicit tx => me.stop }}
 
-
             Silent.ar( 2 )// dummy thru
          }
       }
@@ -385,7 +390,7 @@ object Nuages extends TabletListener {
          val pfeed   = pControl( "feed", ParamSpec( 0, 1 ), 0 )
          val ploop   = pScalar( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
          val ppos    = pScalar( "pos", ParamSpec( 0, 1 ), 0 )
-         graph { in =>
+         graph { in: In =>
             val bufID   = Select.kr( pbuf.kr, loopBufIDs )
             val feed    = pfeed.kr
             val prelvl  = feed.sqrt
@@ -417,7 +422,7 @@ object Nuages extends TabletListener {
          val ptime   = pAudio( "time", ParamSpec( 0.3,  30.0, ExpWarp ), 10 )
          val pfeed   = pAudio( "feed", ParamSpec( 0.001, 1.0, ExpWarp ), 0.001 )
          val pmix    = pMix
-         graph { in =>
+         graph { in: In =>
             val numFrames  = (sampleRate * 30).toInt
             val numChannels= in.numOutputs
             val buf        = bufEmpty( numFrames, numChannels )
@@ -451,7 +456,7 @@ object Nuages extends TabletListener {
          val pbits   = pAudio( "bits", ParamSpec( 2, 14, LinWarp, 1 ), 14 )
          val pmix    = pMix
 
-         graph { in =>
+         graph { in: In =>
             val flt  = MantissaMask.ar( in, pbits.ar )
             mix( in, flt, pmix )
          }
@@ -461,7 +466,7 @@ object Nuages extends TabletListener {
          val pspeed  = pAudio( "speed", ParamSpec( 0.125, 2.3511, ExpWarp ), 0.5 )
          val pmix    = pMix
 
-         graph { in =>
+         graph { in: In =>
             val speed	   = Lag.ar( pspeed.ar, 0.1 )
             val numFrames  = sampleRate.toInt
             val numChannels= in.numOutputs
@@ -484,30 +489,31 @@ object Nuages extends TabletListener {
       filter( "a-gate" ) {
          val pamt = pAudio( "amt", ParamSpec( 0, 1 ), 1 )
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val amount = Lag.ar( pamt.ar, 0.1 )
             val flt = Compander.ar( in, in, Amplitude.ar( in * (1 - amount ) * 5 ), 20, 1, 0.01, 0.001 )
             mix( in, flt, pmix )
          }
       }
 
-      filter( "a-hilb" ) {
-         val pmix = pMix
-         graph { in =>
-            var flt: GE = List.fill( in.numOutputs )( 0.0 )
-            in.outputs foreach { ch =>
-               val hlb  = Hilbert.ar( DelayN.ar( ch, 0.01, 0.01 ))
-               val hlb2 = Hilbert.ar( Normalizer.ar( ch, dur = 0.02 ))
-               flt     += (hlb \ 0) * (hlb2 \ 0) - (hlb \ 1 * hlb2 \ 1)
-            }
-            mix( in, flt, pmix )
-         }
-      }
+// XXX TODO
+//      filter( "a-hilb" ) {
+//         val pmix = pMix
+//         graph { in: In =>
+//            var flt: GE = List.fill( in.numOutputs )( 0.0 )
+//            in.outputs foreach { ch =>
+//               val hlb  = Hilbert.ar( DelayN.ar( ch, 0.01, 0.01 ))
+//               val hlb2 = Hilbert.ar( Normalizer.ar( ch, dur = 0.02 ))
+//               flt     += (hlb \ 0) * (hlb2 \ 0) - (hlb \ 1 * hlb2 \ 1)
+//            }
+//            mix( in, flt, pmix )
+//         }
+//      }
 
       filter( "hilbert" ) {
          val pfreq   = pAudio( "freq", ParamSpec( -1, 1 ), 0.0 )
          val pmix    = pMix
-         graph { in =>
+         graph { in: In =>
             val freq    = pfreq.ar
             val freqHz  = freq.abs.linexp( 0, 1, 20, 12000 ) * freq.signum
             val flt     = FreqShift.ar( in, freqHz )
@@ -522,7 +528,7 @@ object Nuages extends TabletListener {
          val pq      = pAudio( "q", ParamSpec( 0.5, 50, ExpWarp ), 1 )
          val pmix    = pMix
 
-         graph { in =>
+         graph { in: In =>
             val freq0   = pfreq.ar
             val freq    = freq0 :: (freq0 * pfreq2.ar).max( 30 ).min( 13000 ) :: Nil
             val rq      = pq.ar.reciprocal
@@ -538,7 +544,7 @@ object Nuages extends TabletListener {
          val pq      = pAudio( "q", ParamSpec( 1, 50, ExpWarp ), 1 )       // beware of the lower q
          val pmix    = pMix
 
-         graph { in =>
+         graph { in: In =>
             val freq0   = pfreq.ar
             val freq    = freq0 :: (freq0 * pfreq2.ar).max( 30 ).min( 16000 ) :: Nil
             val rq      = pq.ar.reciprocal
@@ -552,7 +558,7 @@ object Nuages extends TabletListener {
          val pfreq   = pAudio( "freq", ParamSpec( -1, 1 ), 0.54 )
          val pmix    = pMix
          
-         graph { in =>
+         graph { in: In =>
             val normFreq	= pfreq.ar
             val lowFreqN	= Lag.ar( Clip.ar( normFreq, -1, 0 ))
             val highFreqN	= Lag.ar( Clip.ar( normFreq,  0, 1 ))
@@ -575,7 +581,7 @@ object Nuages extends TabletListener {
 		   val pfeed   = pAudio(   "fb",    ParamSpec( 0, 1 ), 0 )
          val pmix    = pMix
 
-         graph { in =>
+         graph { in: In =>
             val bufDur        = 4.0
             val numFrames     = (bufDur * sampleRate).toInt
             val numChannels   = in.numOutputs
@@ -616,7 +622,7 @@ object Nuages extends TabletListener {
       filter( "*" ) {
          val pmix = pMix
          val bin2  = pAudioIn( "in2" )
-         graph { in =>
+         graph { in: In =>
             val in2  = bin2.ar
             val flt  = in * in2
             mix( in, flt, pmix )
@@ -626,7 +632,7 @@ object Nuages extends TabletListener {
       filter( "gain" ) {
          val pgain   = pAudio( "gain", ParamSpec( -30, 30 ), 0 )
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val amp  = pgain.ar.dbamp
             val flt  = in * amp 
             mix( in, flt, pmix )
@@ -636,7 +642,7 @@ object Nuages extends TabletListener {
       filter( "gendy" ) {
          val pamt = pAudio( "amt", ParamSpec( 0, 1 ), 1 )
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val amt     = Lag.ar( pamt.ar, 0.1 )
             val minFreq	= amt * 69 + 12;
             val scale	= amt * 13 + 0.146;
@@ -656,7 +662,7 @@ object Nuages extends TabletListener {
          val prnd = pAudio( "rnd", ParamSpec( 0, 1 ), 0 )
 
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val sig = in.clip2( 1 ).linlin( -1, 1, plo.ar, phi.ar ).pow( ppow.ar ).round( prnd.ar ) * 2 - 1
             mix( in, sig, pmix )
          }
@@ -667,7 +673,7 @@ object Nuages extends TabletListener {
          val pdecay  = pAudio( "decay",  ParamSpec( 0, 1 ), 0 )
 
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val numChannels   = in.numOutputs
             val bufIDs        = List.fill( numChannels )( bufEmpty( 1024 ).id )
             val chain1 		   = FFT( bufIDs, in )
@@ -680,7 +686,7 @@ object Nuages extends TabletListener {
       filter( "m-above" ) {
          val pthresh = pAudio( "thresh", ParamSpec( 1.0e-3, 1.0e-1, ExpWarp ), 1.0e-2 )
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val numChannels   = in.numOutputs
             val thresh		   = A2K.kr( pthresh.ar )
             val env			   = Env( 0.0, List( S( 0.2, 0.0, stepShape ), S( 0.2, 1.0, linShape )))
@@ -702,7 +708,7 @@ object Nuages extends TabletListener {
       filter( "m-below" ) {
          val pthresh = pAudio( "thresh", ParamSpec( 1.0e-2, 1.0e-0, ExpWarp ), 1.0e-1 )
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val numChannels   = in.numOutputs
             val thresh		   = A2K.kr( pthresh.ar )
             val env			   = Env( 0.0, List( S( 0.2, 0.0, stepShape ), S( 0.2, 1.0, linShape )))
@@ -729,7 +735,7 @@ object Nuages extends TabletListener {
          val ptime   = pAudio( "time",  ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
          val ppitch  = pAudio( "pitch", ParamSpec( 0.01, 1, ExpWarp ), 0.1 )
          val pmix    = pMix
-         graph { in =>
+         graph { in: In =>
             val grainSize  = 0.5f
             val pitch	   = A2K.kr( ptrans.ar )
             val timeDisp	= A2K.kr( ptime.ar )
@@ -742,7 +748,7 @@ object Nuages extends TabletListener {
       filter( "pow" ) {
          val pamt = pAudio( "amt", ParamSpec( 0, 1 ), 0.5 )
          val pmix = pMix
-         graph { in =>
+         graph { in: In =>
             val amt  = pamt.ar
             val amtM = 1 - amt
             val exp  = amtM * 0.5 + 0.5
@@ -781,35 +787,36 @@ object Nuages extends TabletListener {
          }
       }
 */
-   
-      filter( "verb" ) {
-         val pextent = pScalar( "size", ParamSpec( 0, 1 ), 0.5 )
-         val pcolor  = pControl( "color", ParamSpec( 0, 1 ), 0.5 )
-         val pmix    = pMix
-         graph { in =>
-            val extent     = pextent.ir
-            val color	   = Lag.kr( pcolor.kr, 0.1 )
-            val i_roomSize	= LinExp.ir( extent, 0, 1, 1, 100 )
-            val i_revTime  = LinExp.ir( extent, 0, 1, 0.3, 20 )
-            val spread	   = 15
-            val numChannels= in.numOutputs
-            val ins        = in.outputs
-            val verbs      = (ins :+ ins.last).grouped( 2 ).toSeq.flatMap( pair =>
-               (GVerb.ar( Mix( pair ), i_roomSize, i_revTime, color, color, spread, 0, 1, 0.7, i_roomSize ) * 0.3).outputs
-            )
-// !! BUG IN SCALA 2.8.0 : CLASSCASTEXCEPTION
-// weird stuff goin on with UGenIn seqs...
-            val flt: GE     = Vector( verbs.take( numChannels ): _* ) // drops last one if necessary
-            mix( in, flt, pmix )
-         }
-      }
+
+// XXX TODO
+//      filter( "verb" ) {
+//         val pextent = pScalar( "size", ParamSpec( 0, 1 ), 0.5 )
+//         val pcolor  = pControl( "color", ParamSpec( 0, 1 ), 0.5 )
+//         val pmix    = pMix
+//         graph { in: In =>
+//            val extent     = pextent.ir
+//            val color	   = Lag.kr( pcolor.kr, 0.1 )
+//            val i_roomSize	= LinExp.ir( extent, 0, 1, 1, 100 )
+//            val i_revTime  = LinExp.ir( extent, 0, 1, 0.3, 20 )
+//            val spread	   = 15
+//            val numChannels= in.numOutputs
+//            val ins        = in.outputs
+//            val verbs      = (ins :+ ins.last).grouped( 2 ).toSeq.flatMap( pair =>
+//               (GVerb.ar( Mix( pair ), i_roomSize, i_revTime, color, color, spread, 0, 1, 0.7, i_roomSize ) * 0.3).outputs
+//            )
+//// !! BUG IN SCALA 2.8.0 : CLASSCASTEXCEPTION
+//// weird stuff goin on with UGenIn seqs...
+//            val flt: GE     = Vector( verbs.take( numChannels ): _* ) // drops last one if necessary
+//            mix( in, flt, pmix )
+//         }
+//      }
 
       filter( "zero" ) {
          val pwidth	= pAudio( "width", ParamSpec( 0, 1 ), 0.5 )
          val pdiv 	= pAudio( "div",   ParamSpec( 1, 10, LinWarp, 1 ), 1 )
          val plag	   = pAudio( "lag",   ParamSpec( 0.001, 0.1, ExpWarp ), 0.01 )
          val pmix    = pMix
-         graph { in =>
+         graph { in: In =>
             val freq		= ZeroCrossing.ar( in ).max( 20 )
             val width0  = Lag.ar( pwidth.ar, 0.1 )
             val amp		= width0.sqrt
@@ -835,7 +842,8 @@ object Nuages extends TabletListener {
 
          def placeChannels( sig: GE ) : GE = {
             if( numCh == masterBus.numChannels ) sig else {
-               Vector.fill( chanOff )( Constant( 0 )) ++ sig.outputs ++ Vector.fill( masterBus.numChannels - (numCh + chanOff) )( Constant( 0 ))
+//               IndexedSeq.fill( chanOff )( Constant( 0 )) ++ sig.outputs ++ IndexedSeq.fill( masterBus.numChannels - (numCh + chanOff) )( Constant( 0 ))
+               Seq( Silent.ar( chanOff ), Flatten( sig ), Silent.ar( masterBus.numChannels - (numCh + chanOff) )) : GE
             }
          }
 
@@ -843,11 +851,12 @@ object Nuages extends TabletListener {
             filter( "O-all" + suff ) {
                val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
 
-               graph { in =>
-                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
-                  val inChannels   = sig.size
+               graph { in: In =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )) // .outputs
+//                  val inChannels   = in.numChannels // sig.size
                   val outChannels  = numCh
-                  val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
+//                  val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  val outSig     = WrapExtendChannels( outChannels, sig )
                   placeChannels( outSig )
                }
             }
@@ -858,37 +867,48 @@ object Nuages extends TabletListener {
                val pbase   = pControl( "azi",  ParamSpec( 0.0, 360.0 ), 0.0 )
                val pamp    = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
 
-               graph { in =>
+               graph { in: In =>
                   val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
                   val rotaAmt       = Lag.kr( prota.kr, 0.1 )
                   val spread        = Lag.kr( pspread.kr, 0.5 )
                   val inChannels   = in.numOutputs
                   val outChannels  = numCh
                   val rotaSpeed     = 0.1
-                  val inSig         = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val inSig         = (in * Lag.ar( pamp.ar, 0.1 )) // .outputs
                   val noise         = LFDNoise1.kr( rotaSpeed ) * rotaAmt * 2
-                  val outSig0: Array[ GE ] = Array.fill( outChannels )( 0 )
+//                  val outSig0: Array[ GE ] = Array.fill( outChannels )( 0 )
                   val altern        = false
-                  for( inCh <- 0 until inChannels ) {
+//                  for( inCh <- 0 until inChannels ) {
+//                     val pos0 = if( altern ) {
+//                        (baseAzi / 180) + (inCh / outChannels * 2);
+//                     } else {
+//                        (baseAzi / 180) + (inCh / inChannels * 2);
+//                     }
+//                     val pos = pos0 + noise
+//
+//                     // + rota
+//   //				   w	 = inCh / (inChannels -1);
+//   //				   level = ((1 - levelMod) * w) + (1 - w);
+//                     val level   = 1   // (1 - w);
+//                     val width   = (spread * (outChannels - 2)) + 2
+//                     val pan     = PanAz.ar( outChannels, inSig( inCh ), pos, level, width, 0 )
+//                     pan.outputs.zipWithIndex.foreach( tup => {
+//                        val (chanSig, i) = tup
+//                        outSig0( i ) = outSig0( i ) + chanSig
+//                     })
+//                  }
+                  val pos: GE = Seq.tabulate( inChannels )( inCh => {
                      val pos0 = if( altern ) {
-                        (baseAzi / 180) + (inCh / outChannels * 2);
+                        (baseAzi / 180) + (inCh / outChannels * 2)
                      } else {
-                        (baseAzi / 180) + (inCh / inChannels * 2);
+                        (baseAzi / 180) + (inCh / inChannels * 2)
                      }
-                     val pos = pos0 + noise
-
-                     // + rota
-   //				   w	 = inCh / (inChannels -1);
-   //				   level = ((1 - levelMod) * w) + (1 - w);
-                     val level   = 1   // (1 - w);
-                     val width   = (spread * (outChannels - 2)) + 2
-                     val pan     = PanAz.ar( outChannels, inSig( inCh ), pos, level, width, 0 )
-                     pan.outputs.zipWithIndex.foreach( tup => {
-                        val (chanSig, i) = tup
-                        outSig0( i ) = outSig0( i ) + chanSig
-                     })
-                  }
-                  val outSig = outSig0.toSeq
+                     pos0 + noise
+                  })
+                  val level   = 1   // (1 - w);
+                  val width   = (spread * (outChannels - 2)) + 2
+                  val outSig  = PanAz.ar( outChannels, inSig, pos, level, width, 0 )
+//                  val outSig = outSig0.toSeq
                   placeChannels( outSig )
                }
             }
@@ -899,11 +919,12 @@ object Nuages extends TabletListener {
                val ppow  = pControl( "pow", ParamSpec( 1, 10 ), 2 )
                val plag  = pControl( "lag", ParamSpec( 0.1, 10 ), 1 )
 
-               graph { in =>
-                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
-                  val inChannels   = sig.size
+               graph { in: In =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )) // .outputs
+                  val inChannels   = in.numChannels // sig.size
                   val outChannels  = numCh
-                  val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+//                  val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  val sig1          = WrapExtendChannels( outChannels, sig )
                   val freq         = pfreq.kr
                   val lag          = plag.kr
                   val pw           = ppow.kr
@@ -918,11 +939,12 @@ object Nuages extends TabletListener {
                val pamp  = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
                val pout  = pAudioOut( "out", None )
 
-               graph { in =>
-                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
-                  val inChannels   = sig.size
+               graph { in: In =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )) // .outputs
+                  val inChannels   = in.numChannels // sig.size
                   val outChannels  = numCh
-                  val outSig       = Vector.tabulate( outChannels )( ch => sig( ch % inChannels ))
+//                  val outSig       = IndexedSeq.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  val outSig        = WrapExtendChannels( outChannels, sig )
    //             if( METERS ) Out.ar( masterBusIndex, outSig )
                   pout.ar( placeChannels( outSig ))
                }
@@ -935,7 +957,7 @@ object Nuages extends TabletListener {
                val pamp    = pAudio( "amp", ParamSpec( 0.01, 10, ExpWarp ), 1 )
                val pout    = pAudioOut( "out", None )
 
-               graph { in =>
+               graph { in: In =>
                   val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
                   val rotaAmt       = Lag.kr( prota.kr, 0.1 )
                   val spread        = Lag.kr( pspread.kr, 0.5 )
@@ -943,32 +965,43 @@ object Nuages extends TabletListener {
                   val outChannels  = numCh
    //            val sig1         = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
                   val rotaSpeed     = 0.1
-                  val inSig         = (in * Lag.ar( pamp.ar, 0.1 )).outputs
+                  val inSig         = (in * Lag.ar( pamp.ar, 0.1 )) // .outputs
                   val noise         = LFDNoise1.kr( rotaSpeed ) * rotaAmt * 2
-                  val outSig0: Array[ GE ] = Array.fill( outChannels )( 0 )
+//                  val outSig0: Array[ GE ] = Array.fill( outChannels )( 0 )
                   val altern        = false
-                  for( inCh <- 0 until inChannels ) {
+//                  for( inCh <- 0 until inChannels ) {
+//                     val pos0 = if( altern ) {
+//                        (baseAzi / 180) + (inCh / outChannels * 2);
+//                     } else {
+//                        (baseAzi / 180) + (inCh / inChannels * 2);
+//                     }
+//                     val pos = pos0 + noise
+//
+//                     // + rota
+//   //				   w	 = inCh / (inChannels -1);
+//   //				   level = ((1 - levelMod) * w) + (1 - w);
+//                     val level   = 1   // (1 - w);
+//                     val width   = (spread * (outChannels - 2)) + 2
+//                     val pan     = PanAz.ar( outChannels, inSig( inCh ), pos, level, width, 0 )
+//                     pan.outputs.zipWithIndex.foreach( tup => {
+//                        val (chanSig, i) = tup
+//                        outSig0( i ) = outSig0( i ) + chanSig
+//                     })
+//                  }
+//                  val outSig = outSig0.toSeq
+                  val pos: GE = Seq.tabulate( inChannels )( inCh => {
                      val pos0 = if( altern ) {
                         (baseAzi / 180) + (inCh / outChannels * 2);
                      } else {
                         (baseAzi / 180) + (inCh / inChannels * 2);
                      }
-                     val pos = pos0 + noise
-
-                     // + rota
-   //				   w	 = inCh / (inChannels -1);
-   //				   level = ((1 - levelMod) * w) + (1 - w);
-                     val level   = 1   // (1 - w);
-                     val width   = (spread * (outChannels - 2)) + 2
-                     val pan     = PanAz.ar( outChannels, inSig( inCh ), pos, level, width, 0 )
-                     pan.outputs.zipWithIndex.foreach( tup => {
-                        val (chanSig, i) = tup
-                        outSig0( i ) = outSig0( i ) + chanSig
-                     })
-                  }
-                  val outSig = outSig0.toSeq
+                     pos0 + noise
+                  })
+                  val level   = 1   // (1 - w);
+                  val width   = (spread * (outChannels - 2)) + 2
+                  val outSig  = PanAz.ar( outChannels, inSig, pos, level, width, 0 )
    //            if( METERS ) Out.ar( masterBusIndex, outSig )
-                  pout.ar( placeChannels( outSig.toSeq ))
+                  pout.ar( placeChannels( outSig ))
                }
             }
 
@@ -979,11 +1012,12 @@ object Nuages extends TabletListener {
                val plag  = pControl( "lag", ParamSpec( 0.1, 10 ), 1 )
                val pout  = pAudioOut( "out", None )
 
-               graph { in =>
-                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )).outputs
-                  val inChannels   = sig.size
+               graph { in: In =>
+                  val sig          = (in * Lag.ar( pamp.ar, 0.1 )) // .outputs
+                  val inChannels   = in.numChannels // sig.size
                   val outChannels  = numCh
-                  val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+//                  val sig1: GE     = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
+                  val sig1          = WrapExtendChannels( outChannels, sig )
                   val freq         = pfreq.kr
                   val lag          = plag.kr
                   val pw           = ppow.kr
@@ -997,7 +1031,7 @@ object Nuages extends TabletListener {
       }
 
       diff( "O-mute" ) {
-         graph { in =>
+         graph { in: In =>
             val gagaism: GE = 0
             gagaism
          }
@@ -1027,21 +1061,22 @@ object Nuages extends TabletListener {
             } else if( numIn == 1 ) {
                Vector.fill[ GE ]( numOut )( sig )
             } else {
-               val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
-               val sca     = (numOut - 1).toFloat / (numIn - 1)
-               sig.outputs.zipWithIndex.foreach { tup =>
-                  val (sigIn, inCh) = tup
-                  val outCh         = inCh * sca
-                  val fr            = outCh % 1f
-                  val outChI        = outCh.toInt
-                  if( fr == 0f ) {
-                     sigOut( outChI ) += sigIn
-                  } else {
-                     sigOut( outChI )     += sigIn * (1 - fr).sqrt
-                     sigOut( outChI + 1 ) += sigIn * fr.sqrt
-                  }
-               }
-               Limiter.ar( sigOut.toSeq, (-0.2).dbamp )
+//               val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
+//               val sca     = (numOut - 1).toFloat / (numIn - 1)
+//               sig.outputs.zipWithIndex.foreach { tup =>
+//                  val (sigIn, inCh) = tup
+//                  val outCh         = inCh * sca
+//                  val fr            = outCh % 1f
+//                  val outChI        = outCh.toInt
+//                  if( fr == 0f ) {
+//                     sigOut( outChI ) += sigIn
+//                  } else {
+//                     sigOut( outChI )     += sigIn * (1 - fr).sqrt
+//                     sigOut( outChI + 1 ) += sigIn * fr.sqrt
+//                  }
+//               }
+               val sigOut = SplayAz.ar( numOut, sig )
+               Limiter.ar( sigOut, (-0.2).dbamp )
             }
             assert( sig1.numOutputs == numOut )
             Out.ar( off, sig1 )
@@ -1049,39 +1084,44 @@ object Nuages extends TabletListener {
          // master + people meters
          val meterTr    = Impulse.kr( 20 )
          //val trigA    = Trig1.ar( meterTr, SampleDur.ir )
-         val (peoplePeak, peopleRMS) = {
+         val (peoplePeak: GE, peopleRMS: GE) = {
             val res = PEOPLE_CHANGROUPS.map { group =>
                val (_, off, numIn)  = group
                val pSig       = In.ar( NumOutputBuses.ir + off, numIn )
-               val peak       = Peak.kr( pSig, meterTr ).outputs
-               val peakM      = peak.tail.foldLeft[ GE ]( peak.head )( _ max _ ) \ 0
+               val peak       = Peak.kr( pSig, meterTr ) // .outputs
+//               val peakM      = peak.tail.foldLeft[ GE ]( peak.head )( _ max _ ) \ 0
+               val peakM      = Reduce.max( peak )
                val rms        = A2K.kr( Lag.ar( pSig.squared, 0.1 ))
-               val rmsM       = (Mix( rms ) / numIn) \ 0
+//               val rmsM       = (Mix( rms ) / numIn) \ 0
+               val rmsM       = Mix.mono( rms ) / numIn
                (peakM, rmsM)
 //               (Constant( 0 ), Constant( 0 ))
             }
             res.map( _._1 ) -> res.map( _._2 )  // elegant it's not
          }
-         val masterPeak = Peak.kr( sig, meterTr )
-         val masterRMS  = A2K.kr( Lag.ar( sig.squared, 0.1 ))
-         val peak       = masterPeak.outputs ++ peoplePeak
-         val rms        = masterRMS.outputs  ++ peopleRMS
-         val meterData  = (peak zip rms).flatMap( tup => tup._1 :: tup._2 :: Nil )
+         val masterPeak    = Peak.kr( sig, meterTr )
+         val masterRMS     = A2K.kr( Lag.ar( sig.squared, 0.1 ))
+//         val peak       = masterPeak.outputs ++ peoplePeak
+//         val rms        = masterRMS.outputs  ++ peopleRMS
+         val peak: GE      = Seq( masterPeak, peoplePeak )
+         val rms: GE       = Seq( masterRMS, peopleRMS )
+//         val meterData     = (peak zip rms).flatMap( tup => tup._1 :: tup._2 :: Nil )
+         val meterData     = Zip( peak, rms )
          SendReply.kr( meterTr,  meterData, "/meters" )
       }
       synPostM = dfPostM.play( s, addAction = addToTail )
 
-      if( GAGA6000 ) {
-         require( MASTER_NUMCHANNELS == 8 )
-         val eqDef = SynthDef( "eq" ) {
-            val sig     = In.ar( MASTER_OFFSET, 6 )
-            val trnsIn  = HPF.ar( sig.outputs.take( 3 ), 60 )
-            val jbl     = HPF.ar( sig.outputs.drop( 3 ), 30 )
-            val trns    = Compander.ar( trnsIn, trnsIn, GAGA_THRESH.dbamp, ratioAbove = GAGA_RATIO, attack = 0.01, release = 0.1 )
-            ReplaceOut.ar( MASTER_OFFSET, trns.outputs ++ jbl.outputs )
-         }
-         eqDef.play( s, addAction = addAfter )
-      }
+//      if( GAGA6000 ) {
+//         require( MASTER_NUMCHANNELS == 8 )
+//         val eqDef = SynthDef( "eq" ) {
+//            val sig     = In.ar( MASTER_OFFSET, 6 )
+//            val trnsIn  = HPF.ar( sig.outputs.take( 3 ), 60 )
+//            val jbl     = HPF.ar( sig.outputs.drop( 3 ), 30 )
+//            val trns    = Compander.ar( trnsIn, trnsIn, GAGA_THRESH.dbamp, ratioAbove = GAGA_RATIO, attack = 0.01, release = 0.1 )
+//            ReplaceOut.ar( MASTER_OFFSET, trns.outputs ++ jbl.outputs )
+//         }
+//         eqDef.play( s, addAction = addAfter )
+//      }
 
       // tablet
       this.f = f

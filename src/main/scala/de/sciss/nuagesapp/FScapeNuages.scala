@@ -35,7 +35,7 @@ import Setup._
 import de.sciss.fscape.FScapeJobs
 import de.sciss.synth
 import synth._
-import proc.{LinWarp, ExpWarp, DSL, Proc, ParamSpec, Ref, ProcTxn}
+import proc.{LinWarp, ExpWarp, DSL, Proc, ParamSpec, ProcTxn}
 import ugen._
 import DSL._
 
@@ -46,11 +46,11 @@ object FScapeNuages {
 
    def init( s: Server, f: NuagesFrame ) = ProcTxn.atomic { implicit tx =>
       filter( ">fsc" ) {
-         val palgo   = pScalar(  "algo", ParamSpec( 0,  3, LinWarp, 1 ), 0 )
+         /* val palgo = */ pScalar(  "algo", ParamSpec( 0,  3, LinWarp, 1 ), 0 )
          val pstop   = pControl( "stop", ParamSpec( 0,  1, LinWarp, 1 ), 0 )
-         val ppos    = pControl( "pos",  ParamSpec( 0, 60, LinWarp, 1 ), 0 )
-         graph { in =>
-            val cnt0    = cnt
+         /* val ppos = */ pControl( "pos",  ParamSpec( 0, 60, LinWarp, 1 ), 0 )
+         graph { in: In =>
+//            val cnt0    = cnt
             cnt += 1
             val pathIn  = REC_PATH + fs + "fscin" + cnt + ".aif"
             val pathOut = REC_PATH + fs + /* "_fsc" */ "|fsc" + cnt + ".aif"
@@ -70,7 +70,7 @@ object FScapeNuages {
                   me.bypass // stop
                   val algo = me.control( "algo" ).v.toInt
                   new UTimer().schedule( new TimerTask {
-                     def run {
+                     def run() {
                         process( pathIn, pathOut, algo )
                      }
                   }, 2000 )   // XXX bit tricky, we need to make sure that the buffer was closed properly
@@ -94,7 +94,7 @@ object FScapeNuages {
             Bleach( pathIn, None, tmpPath, OutputSpec.aiffInt, Gain.normalized, feedback = "-54dB", inverse = true )
          case 3 =>
             StepBack( pathIn, tmpPath, OutputSpec.aiffInt, Gain.normalized, minXFade = "0.05s", maxSpacing = "3.0s" )
-         case _ => error( "Illegal algorithm number " + algo )
+         case _ => sys.error( "Illegal algorithm number " + algo )
       }
 
       val docLp = MakeLoop( tmpPath, pathOut, OutputSpec.aiffInt, Gain.normalized )
@@ -108,7 +108,7 @@ object FScapeNuages {
    }
 
    private def addFactory( path: String ) {
-      val name0   = new File( path ).getName()
+      val name0   = new File( path ).getName
       val i       = name0.lastIndexOf( '.' )
       val name    = if( i < 0 ) name0 else name0.substring( 0, i )
       val spec    = audioFileSpec( path )
@@ -143,8 +143,8 @@ object FScapeNuages {
                   }
                }}
 
-               val sig    = VDiskIn.ar( numCh, b.id, speed, loop = ploop.ir ).outputs.take(2)
-               if( numCh == 1 ) List( sig( 0 ), sig( 0 )) else sig
+               val disk = VDiskIn.ar( numCh, b.id, speed, loop = ploop.ir )
+               WrapExtendChannels( 2, disk )
             }
          }
       }

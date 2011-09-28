@@ -28,25 +28,20 @@
 
 package de.sciss.nuagesapp
 
-import de.sciss.synth.swing.{NodeTreePanel, ServerStatusPanel}
-import de.sciss.synth.proc.ProcDemiurg
-import collection.breakOut
-import collection.immutable.{ IndexedSeq => IIdxSeq }
-import de.sciss.synth.io.AudioFile
 import de.sciss.synth._
-import de.sciss.freesound.swing.{SearchProgressFrame, SearchResultFrame, SearchQueryFrame, LoginFrame}
-import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
-import actors.DaemonActor
+import swing.j.JServerStatusPanel
+import de.sciss.osc.Message
+import proc.ProcDemiurg
+//import de.sciss.freesound.swing.{SearchProgressFrame, SearchResultFrame, SearchQueryFrame, LoginFrame}
+//import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
 import osc.OSCResponder
-import de.sciss.osc.OSCMessage
 import de.sciss.scalainterpreter.LogPane
 import java.util.Properties
-import java.io.{FileOutputStream, FileInputStream, PrintStream, FilenameFilter, File, RandomAccessFile}
-import de.sciss.nuages.{NuagesPanel, NuagesConfig, NuagesFrame}
-import java.awt.geom.Point2D
+import java.io.{FileOutputStream, FileInputStream, PrintStream, File}
+import de.sciss.nuages.{NuagesConfig, NuagesFrame}
 import java.awt.event.{ActionEvent, KeyEvent}
 import java.awt.{Point, Toolkit, Font, EventQueue, GraphicsEnvironment}
-import javax.swing.{AbstractAction, KeyStroke, JScrollPane, JComponent, JFrame, Box, WindowConstants}
+import javax.swing.{AbstractAction, KeyStroke, JScrollPane, JComponent, Box}
 
 /**
  *    @version 0.12, 02-Oct-10
@@ -216,7 +211,7 @@ object Setup extends Runnable {
       System.setProperty( "actors.enableForkJoin", "false" )
 
 //      val sif  = new ScalaInterpreterFrame( support /* ntp */ )
-      val ssp  = new ServerStatusPanel( ServerStatusPanel.COUNTS )
+      val ssp  = new JServerStatusPanel( JServerStatusPanel.COUNTS )
 //      val sspw = ssp.makeWindow( undecorated = true )
 //      sspw.pack()
 
@@ -272,7 +267,7 @@ object Setup extends Runnable {
 
             val synPostMID = Nuages.synPostM.id
             OSCResponder.add({
-               case OSCMessage( "/meters", `synPostMID`, 0, values @ _* ) =>
+               case Message( "/meters", `synPostMID`, 0, values @ _* ) =>
                   EventQueue.invokeLater( new Runnable { def run() { ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ]).toArray )}})
             }, s )
 
@@ -339,90 +334,90 @@ object Setup extends Runnable {
       tapes
    }
 
-   private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],
-                                          icache: Option[ SampleInfoCache ], downloadPath: Option[ String ]) : JFrame = {
-      val srf = new SearchResultFrame( samples, login, title, icache, downloadPath )
-      srf.setLocationRelativeTo( null )
-      srf.setVisible( true )
-      var checked = Set.empty[ String ]
-      srf.addListener {
-         case SearchResultFrame.SelectionChanged( sel @ _* ) => {
-//println( "SELECTION = " + sel )
-            val pathO = sel.headOption.flatMap( _.download.flatMap( path => {
-//println( "AQUI " + path )
-               if( checked.contains( path )) Some( path ) else {
-                  try {
-                     val spec = AudioFile.readSpec( path )
-                     if( spec.numChannels > 0 && spec.numChannels <= 2 ) {
-                        checked += path
-                        Some( path )
-                     } else None
-                  } catch { case e => None }
-               }
-            }))
-println( "FS PATH = " + pathO )
-            Nuages.freesoundFile = pathO
-         }
-      }
-
-      srf
-   }
-
-   private def initFreesound( username: String, password: String ) : JFrame = {
-      val icachePath = BASE_PATH + fs + "infos"
-      val icache = Some( SampleInfoCache.persistent( icachePath ))
-      val downloadPath = Some( BASE_PATH + fs + "samples" )
-      val f = new LoginFrame()
-
-      f.setDefaultCloseOperation( WindowConstants.EXIT_ON_CLOSE )
-      f.setLocation( 0, SCREEN_BOUNDS.height - f.getHeight )
-      f.setVisible( true )
-      f.username  = username
-      f.password_=( password )
-      f.addListener {
-         case LoginFrame.LoggedIn( login ) => {
-            support.login = login
-            val sqf = new SearchQueryFrame( f, login )
-            sqf.setLocationRelativeTo( null )
-//            sqf.setLocation( sqf.getX(), 40 )
-            sqf.setLocation( f.getX + f.getWidth, SCREEN_BOUNDS.height - sqf.getHeight )
-            sqf.setVisible( true )
-            sqf.addListener {
-               case SearchQueryFrame.NewSearch( idx, search ) => {
-                  val title = "Freesound Search #" + idx + " (" + {
-                        val kw = search.options.keyword
-                        if( kw.size < 24 ) kw else kw.take( 23 ) + "…"
-                     } + ")"
-                  val spf = new SearchProgressFrame( sqf, search, title )
-                  spf.setLocationRelativeTo( null )
-                  spf.setVisible( true )
-                  spf.addListener {
-                     case Search.SearchDone( samples ) => {
-                        newFreesoundResultsFrame( title, samples, Some( login ), icache, downloadPath )
-                     }
-                  }
-               }
-            }
-         }
-      }
-      if( FREESOUND_OFFLINE ) {
-         val samples: IIdxSeq[ Sample ] = new File( icachePath ).listFiles().map({ f =>
-            val n = f.getName
-            if( n.startsWith( "info" ) && n.endsWith( ".xml" )) {
-               val mid = n.substring( 4, n.length() - 4 )
-               try {
-                  Some( mid.toLong )
-               }
-               catch { case e => None }
-            } else None
-         }).collect({ case Some( id ) => Sample( id )})( breakOut )
-         newFreesoundResultsFrame( "Freesound Cache", samples, None, icache, downloadPath )
-      }
-
-      if( AUTO_LOGIN ) f.performLogin
-
-      f
-   }
+//   private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],
+//                                          icache: Option[ SampleInfoCache ], downloadPath: Option[ String ]) : JFrame = {
+//      val srf = new SearchResultFrame( samples, login, title, icache, downloadPath )
+//      srf.setLocationRelativeTo( null )
+//      srf.setVisible( true )
+//      var checked = Set.empty[ String ]
+//      srf.addListener {
+//         case SearchResultFrame.SelectionChanged( sel @ _* ) => {
+////println( "SELECTION = " + sel )
+//            val pathO = sel.headOption.flatMap( _.download.flatMap( path => {
+////println( "AQUI " + path )
+//               if( checked.contains( path )) Some( path ) else {
+//                  try {
+//                     val spec = AudioFile.readSpec( path )
+//                     if( spec.numChannels > 0 && spec.numChannels <= 2 ) {
+//                        checked += path
+//                        Some( path )
+//                     } else None
+//                  } catch { case e => None }
+//               }
+//            }))
+//println( "FS PATH = " + pathO )
+//            Nuages.freesoundFile = pathO
+//         }
+//      }
+//
+//      srf
+//   }
+//
+//   private def initFreesound( username: String, password: String ) : JFrame = {
+//      val icachePath = BASE_PATH + fs + "infos"
+//      val icache = Some( SampleInfoCache.persistent( icachePath ))
+//      val downloadPath = Some( BASE_PATH + fs + "samples" )
+//      val f = new LoginFrame()
+//
+//      f.setDefaultCloseOperation( WindowConstants.EXIT_ON_CLOSE )
+//      f.setLocation( 0, SCREEN_BOUNDS.height - f.getHeight )
+//      f.setVisible( true )
+//      f.username  = username
+//      f.password_=( password )
+//      f.addListener {
+//         case LoginFrame.LoggedIn( login ) => {
+//            support.login = login
+//            val sqf = new SearchQueryFrame( f, login )
+//            sqf.setLocationRelativeTo( null )
+////            sqf.setLocation( sqf.getX(), 40 )
+//            sqf.setLocation( f.getX + f.getWidth, SCREEN_BOUNDS.height - sqf.getHeight )
+//            sqf.setVisible( true )
+//            sqf.addListener {
+//               case SearchQueryFrame.NewSearch( idx, search ) => {
+//                  val title = "Freesound Search #" + idx + " (" + {
+//                        val kw = search.options.keyword
+//                        if( kw.size < 24 ) kw else kw.take( 23 ) + "…"
+//                     } + ")"
+//                  val spf = new SearchProgressFrame( sqf, search, title )
+//                  spf.setLocationRelativeTo( null )
+//                  spf.setVisible( true )
+//                  spf.addListener {
+//                     case Search.SearchDone( samples ) => {
+//                        newFreesoundResultsFrame( title, samples, Some( login ), icache, downloadPath )
+//                     }
+//                  }
+//               }
+//            }
+//         }
+//      }
+//      if( FREESOUND_OFFLINE ) {
+//         val samples: IIdxSeq[ Sample ] = new File( icachePath ).listFiles().map({ f =>
+//            val n = f.getName
+//            if( n.startsWith( "info" ) && n.endsWith( ".xml" )) {
+//               val mid = n.substring( 4, n.length() - 4 )
+//               try {
+//                  Some( mid.toLong )
+//               }
+//               catch { case e => None }
+//            } else None
+//         }).collect({ case Some( id ) => Sample( id )})( breakOut )
+//         newFreesoundResultsFrame( "Freesound Cache", samples, None, icache, downloadPath )
+//      }
+//
+//      if( AUTO_LOGIN ) f.performLogin
+//
+//      f
+//   }
 
    private def shutDown() { // sync.synchronized { }
       if( (s != null) && (s.condition != Server.Offline) ) {
