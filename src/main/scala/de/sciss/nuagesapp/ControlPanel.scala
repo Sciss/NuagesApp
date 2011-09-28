@@ -1,23 +1,21 @@
 package de.sciss.nuagesapp
 
-import java.awt.event.{ComponentEvent, ComponentAdapter, WindowAdapter, ActionListener, ActionEvent}
-import de.sciss.gui.{PeakMeterPanel, PeakMeter, PeakMeterGroup}
+import java.awt.event.{ComponentEvent, ComponentAdapter}
+import de.sciss.gui.j.PeakMeter
 import Setup._
-import de.sciss.scalainterpreter.LogPane
-import java.io.PrintStream
-import javax.swing.{JComponent, JLabel, WindowConstants, SwingConstants, Box, JToggleButton, BoxLayout, JFrame, JButton, JPanel}
-import javax.swing.plaf.basic.BasicToggleButtonUI
+import javax.swing.{WindowConstants, SwingConstants, Box, JToggleButton, BoxLayout, JFrame}
 import de.sciss.nuages.{BasicToggleButton, BasicPanel, BasicButton}
 import de.sciss.synth.proc.ProcTxn
-import java.awt.{EventQueue, Point, Font, Color, BorderLayout}
+import java.awt.{EventQueue, Color}
+import collection.immutable.{IndexedSeq => IIdxSeq}
 
 class ControlPanel /* ( tapesPanel: JComponent ) */ extends BasicPanel {
    panel =>
 
-   private val masterMeterPanel  = new PeakMeterPanel()
+   private val masterMeterPanel  = new PeakMeter()
    private val peopleOffset      = masterBus.numChannels << 1
-   private val peopleMeterPanel: Option[ PeakMeterPanel ] =
-      if( PEOPLE_CHANGROUPS.nonEmpty ) Some( new PeakMeterPanel() ) else None
+   private val peopleMeterPanel: Option[ PeakMeter ] =
+      if( PEOPLE_CHANGROUPS.nonEmpty ) Some( new PeakMeter() ) else None
    
    private var interpreter : Option[ ScalaInterpreterFrame ] = None
 
@@ -90,9 +88,12 @@ class ControlPanel /* ( tapesPanel: JComponent ) */ extends BasicPanel {
 //      panel.add( m1 )
 //      panel.add( m2 )
       val numCh = masterBus.numChannels
-      masterMeterPanel.setOrientation( SwingConstants.HORIZONTAL )
-      masterMeterPanel.setNumChannels( numCh )
-      masterMeterPanel.setBorder( true )
+//      masterMeterPanel.setOrientation( SwingConstants.HORIZONTAL )
+      masterMeterPanel.orientation = SwingConstants.HORIZONTAL
+//      masterMeterPanel.setNumChannels( numCh )
+      masterMeterPanel.numChannels = numCh
+//      masterMeterPanel.setBorder( true )
+      masterMeterPanel.borderVisible = true
       val d = masterMeterPanel.getPreferredSize
       val dn = 30 / numCh
       d.height = numCh * dn + 7
@@ -100,9 +101,12 @@ class ControlPanel /* ( tapesPanel: JComponent ) */ extends BasicPanel {
       masterMeterPanel.setMaximumSize( d )
       panel.add( masterMeterPanel )
       peopleMeterPanel.foreach { p =>
-         p.setOrientation( SwingConstants.HORIZONTAL )
-         p.setNumChannels( PEOPLE_CHANGROUPS.size )
-         p.setBorder( true )
+//         p.setOrientation( SwingConstants.HORIZONTAL )
+         p.orientation = SwingConstants.HORIZONTAL
+//         p.setNumChannels( PEOPLE_CHANGROUPS.size )
+         p.numChannels = PEOPLE_CHANGROUPS.size
+//         p.setBorder( true )
+         p.borderVisible = true
          val d = p.getPreferredSize
          val dn = 30 / numCh
          d.height = numCh * dn + 7
@@ -160,9 +164,11 @@ glue.setBackground( Color.black )
       f
    }
 
-   def meterUpdate( peakRMSPairs: Array[ Float ]) {
+   def meterUpdate( peakRMSPairs: IIdxSeq[ Float ]) {
       val tim = System.currentTimeMillis 
-      masterMeterPanel.meterUpdate( peakRMSPairs, 0, tim )
-      peopleMeterPanel.foreach( _.meterUpdate( peakRMSPairs, peopleOffset, tim ))
+//      masterMeterPanel.meterUpdate( peakRMSPairs, 0, tim )
+      masterMeterPanel.update( peakRMSPairs, 0, tim )
+//      peopleMeterPanel.foreach( _.meterUpdate( peakRMSPairs, peopleOffset, tim ))
+      peopleMeterPanel.foreach( _.update( peakRMSPairs, peopleOffset, tim ))
    }
 }

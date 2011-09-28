@@ -24,7 +24,7 @@ proguardOptions ++= Seq(
 // "-dontoptimize",
    "-dontobfuscate",
    "-dontshrink",
-//   "-dontpreverify",
+   "-dontpreverify",
    "-forceprocessing"
 )
 

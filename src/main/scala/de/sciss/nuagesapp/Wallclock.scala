@@ -28,11 +28,10 @@
 
 package de.sciss.nuagesapp
 
-import de.sciss.gui.RecessedBorder
-import javax.swing.border.CompoundBorder
-import javax.swing.{BorderFactory, JLabel, JPanel}
+import javax.swing.{BorderFactory, JLabel}
 import java.util.{TimerTask, Timer}
 import java.awt.{EventQueue, Graphics, Color, Font}
+import de.sciss.gui.j.RecessedBorder
 
 class Wallclock extends JLabel {
    private var secs = 0

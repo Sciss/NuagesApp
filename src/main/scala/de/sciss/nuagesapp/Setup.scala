@@ -42,10 +42,8 @@ import de.sciss.nuages.{NuagesConfig, NuagesFrame}
 import java.awt.event.{ActionEvent, KeyEvent}
 import java.awt.{Point, Toolkit, Font, EventQueue, GraphicsEnvironment}
 import javax.swing.{AbstractAction, KeyStroke, JScrollPane, JComponent, Box}
+import collection.breakOut
 
-/**
- *    @version 0.12, 02-Oct-10
- */
 object Setup extends Runnable {
    val fs                  = File.separator
 //   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "CafeConcrete"
@@ -268,7 +266,7 @@ object Setup extends Runnable {
             val synPostMID = Nuages.synPostM.id
             OSCResponder.add({
                case Message( "/meters", `synPostMID`, 0, values @ _* ) =>
-                  EventQueue.invokeLater( new Runnable { def run() { ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ]).toArray )}})
+                  EventQueue.invokeLater( new Runnable { def run() { ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ])( breakOut ))}})
             }, s )
 
             FScapeNuages.fsc.connect()( succ => println( if( succ ) "FScape connected." else "!ERROR! : FScape not connected" ))
