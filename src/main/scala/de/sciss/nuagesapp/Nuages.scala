@@ -1049,7 +1049,7 @@ object Nuages extends TabletListener {
          }
       }
 
-try {
+//try {
       val dfPostM = SynthDef( "post-master" ) {
          val sig = In.ar( masterBus.index, masterBus.numChannels )
          // externe recorder
@@ -1059,7 +1059,7 @@ try {
             val sig1: GE = if( numOut == numIn ) {
                sig
             } else if( numIn == 1 ) {
-               Vector.fill[ GE ]( numOut )( sig )
+               Seq.fill[ GE ]( numOut )( sig )
             } else {
                val sigOut = SplayAz.ar( numOut, sig )
                Limiter.ar( sigOut, (-0.2).dbamp )
@@ -1069,7 +1069,7 @@ try {
          }
          // master + people meters
          val meterTr    = Impulse.kr( 20 )
-         val (peoplePeak: GE, peopleRMS: GE) = {
+         val (peoplePeak, peopleRMS) = {
             val res = PEOPLE_CHANGROUPS.map { group =>
                val (_, off, numIn)  = group
                val pSig       = In.ar( NumOutputBuses.ir + off, numIn )
@@ -1079,21 +1079,21 @@ try {
                val rmsM       = Mix.mono( rms ) / numIn
                (peakM, rmsM)
             }
-            res.map( _._1 ) -> res.map( _._2 )  // elegant it's not
+            (res.map( _._1 ): GE) -> (res.map( _._2 ): GE)  // elegant it's not
          }
          val masterPeak    = Peak.kr( sig, meterTr )
          val masterRMS     = A2K.kr( Lag.ar( sig.squared, 0.1 ))
          val peak: GE      = Seq( masterPeak, peoplePeak )
          val rms: GE       = Seq( masterRMS, peopleRMS )
-         val meterData     = Zip( peak, rms )
-         SendReply.kr( meterTr,  meterData, "/meters" )
+         val meterData     = Flatten( Zip( peak, rms ))  // XXX correct?
+         SendReply.kr( meterTr, meterData, "/meters" )
       }
       synPostM = dfPostM.play( s, addAction = addToTail )
-}
-      catch {
-         case e =>
-            e.printStackTrace()
-      }
+//}
+//      catch {
+//         case e =>
+//            e.printStackTrace()
+//      }
 
 //      if( GAGA6000 ) {
 //         require( MASTER_NUMCHANNELS == 8 )
