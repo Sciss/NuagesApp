@@ -233,7 +233,7 @@ object Nuages extends TabletListener {
 //                  sigOut.toSeq
                   SplayAz.ar( numOut, sig )
                }
-               assert( sig1.numOutputs == numOut )
+//               assert( sig1.numOutputs == numOut )
                sig1
             }
          }
@@ -269,7 +269,7 @@ object Nuages extends TabletListener {
 //                  sigOut.toSeq
                   SplayAz.ar( numOut, sig )
                }
-               assert( sig1.numOutputs == numOut )
+//               assert( sig1.numOutputs == numOut )
                sig1
             }
          }
@@ -342,7 +342,7 @@ object Nuages extends TabletListener {
          val ppos    = pControl( "pos", ParamSpec( 0, 1 ), 0 )
          graph {
             val in      = InFeedback.ar( masterBus.index, masterBus.numChannels )
-            val w       = 2.0 / in.numOutputs
+            val w       = 2.0 / in.numChannels // numOutputs
 //            var sig     = Array[ GE ]( 0, 0 )
 //            in.outputs.zipWithIndex.foreach( tup => {
 //               val (add, ch) = tup
@@ -424,7 +424,7 @@ object Nuages extends TabletListener {
          val pmix    = pMix
          graph { in: In =>
             val numFrames  = (sampleRate * 30).toInt
-            val numChannels= in.numOutputs
+            val numChannels= in.numChannels // numOutputs
             val buf        = bufEmpty( numFrames, numChannels )
             val bufID      = buf.id
             val time       = ptime.ar
@@ -469,7 +469,7 @@ object Nuages extends TabletListener {
          graph { in: In =>
             val speed	   = Lag.ar( pspeed.ar, 0.1 )
             val numFrames  = sampleRate.toInt
-            val numChannels= in.numOutputs
+            val numChannels= in.numChannels // numOutputs
             val buf        = bufEmpty( numFrames, numChannels )
             val bufID      = buf.id
             val writeRate  = BufRateScale.kr( bufID )
@@ -584,7 +584,7 @@ object Nuages extends TabletListener {
          graph { in: In =>
             val bufDur        = 4.0
             val numFrames     = (bufDur * sampleRate).toInt
-            val numChannels   = in.numOutputs
+            val numChannels   = in.numChannels // numOutputs
             val buf           = bufEmpty( numFrames, numChannels )
             val bufID         = buf.id
 
@@ -674,7 +674,7 @@ object Nuages extends TabletListener {
 
          val pmix = pMix
          graph { in: In =>
-            val numChannels   = in.numOutputs
+            val numChannels   = in.numChannels // numOutputs
             val bufIDs        = List.fill( numChannels )( bufEmpty( 1024 ).id )
             val chain1 		   = FFT( bufIDs, in )
             val onsets        = Onsets.kr( chain1, pthresh.kr )
@@ -687,7 +687,7 @@ object Nuages extends TabletListener {
          val pthresh = pAudio( "thresh", ParamSpec( 1.0e-3, 1.0e-1, ExpWarp ), 1.0e-2 )
          val pmix = pMix
          graph { in: In =>
-            val numChannels   = in.numOutputs
+            val numChannels   = in.numChannels // numOutputs
             val thresh		   = A2K.kr( pthresh.ar )
             val env			   = Env( 0.0, List( S( 0.2, 0.0, stepShape ), S( 0.2, 1.0, linShape )))
             val ramp			   = EnvGen.kr( env )
@@ -709,7 +709,7 @@ object Nuages extends TabletListener {
          val pthresh = pAudio( "thresh", ParamSpec( 1.0e-2, 1.0e-0, ExpWarp ), 1.0e-1 )
          val pmix = pMix
          graph { in: In =>
-            val numChannels   = in.numOutputs
+            val numChannels   = in.numChannels // numOutputs
             val thresh		   = A2K.kr( pthresh.ar )
             val env			   = Env( 0.0, List( S( 0.2, 0.0, stepShape ), S( 0.2, 1.0, linShape )))
             val ramp			   = EnvGen.kr( env )
@@ -871,7 +871,7 @@ object Nuages extends TabletListener {
                   val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
                   val rotaAmt       = Lag.kr( prota.kr, 0.1 )
                   val spread        = Lag.kr( pspread.kr, 0.5 )
-                  val inChannels   = in.numOutputs
+                  val inChannels   = in.numChannels // numOutputs
                   val outChannels  = numCh
                   val rotaSpeed     = 0.1
                   val inSig         = (in * Lag.ar( pamp.ar, 0.1 )) // .outputs
@@ -961,7 +961,7 @@ object Nuages extends TabletListener {
                   val baseAzi       = Lag.kr( pbase.kr, 0.5 ) + IRand( 0, 360 )
                   val rotaAmt       = Lag.kr( prota.kr, 0.1 )
                   val spread        = Lag.kr( pspread.kr, 0.5 )
-                  val inChannels   = in.numOutputs
+                  val inChannels   = in.numChannels // numOutputs
                   val outChannels  = numCh
    //            val sig1         = List.tabulate( outChannels )( ch => sig( ch % inChannels ))
                   val rotaSpeed     = 0.1
@@ -1044,7 +1044,7 @@ object Nuages extends TabletListener {
             val in = In.ar( MASTER_OFFSET, MASTER_NUMCHANNELS )
             val recPath = new File( new File( REC_PATH, "mitschnitt" ), df.format( new java.util.Date() ))
 //            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.IRCAM ).id, in )
-            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.IRCAM, SampleFormat.Float ).id, in )
+            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numChannels, AudioFileType.IRCAM, SampleFormat.Float ).id, in )
 //            0.0  // this sucks...
 Silent.ar
          }
@@ -1065,7 +1065,7 @@ Silent.ar
                val sigOut = SplayAz.ar( numOut, sig )
                Limiter.ar( sigOut, (-0.2).dbamp )
             }
-            assert( sig1.numOutputs == numOut )
+//            assert( sig1.numOutputs == numOut )
             Out.ar( off, sig1 )
          }
          // master + people meters
@@ -1084,9 +1084,9 @@ Silent.ar
          }
          val masterPeak    = Peak.kr( sig, meterTr )
          val masterRMS     = A2K.kr( Lag.ar( sig.squared, 0.1 ))
-         val peak: GE      = Seq( masterPeak, peoplePeak )
-         val rms: GE       = Seq( masterRMS, peopleRMS )
-         val meterData     = Flatten( Zip( peak, rms ))  // XXX correct?
+         val peak: GE      = Flatten( Seq( masterPeak, peoplePeak ))
+         val rms: GE       = Flatten( Seq( masterRMS, peopleRMS ))
+         val meterData     = Zip( peak, rms )  // XXX correct?
          SendReply.kr( meterTr, meterData, "/meters" )
       }
       synPostM = dfPostM.play( s, addAction = addToTail )
