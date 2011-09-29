@@ -19,8 +19,7 @@ scalacOptions += "-deprecation"
 
 // ---- proguard ----
 // NOTE: the resulting jar is 31 MB, maybe because of scala-test
-// that should be removed. It also doesn't launch  --
-// cheez, this all worked in sbt 0.7 :-(
+// that should be removed.
 
 // seq(ProguardPlugin.proguardSettings :_*)
 
@@ -36,5 +35,7 @@ scalacOptions += "-deprecation"
 // val standalone = proguard
 
 seq(assemblySettings: _*)
+
+test in assembly := {}
 
 // jarName in assembly := name + "-full.jar"

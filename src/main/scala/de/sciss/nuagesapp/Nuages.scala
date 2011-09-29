@@ -1049,10 +1049,10 @@ object Nuages extends TabletListener {
          }
       }
 
+try {
       val dfPostM = SynthDef( "post-master" ) {
          val sig = In.ar( masterBus.index, masterBus.numChannels )
          // externe recorder
-//         if( REC_COPY >= 0 ) Out.ar( REC_COPY, sig )
          REC_CHANGROUPS.foreach { group =>
             val (name, off, numOut) = group
             val numIn   = masterBus.numChannels
@@ -1061,20 +1061,6 @@ object Nuages extends TabletListener {
             } else if( numIn == 1 ) {
                Vector.fill[ GE ]( numOut )( sig )
             } else {
-//               val sigOut  = Array.fill[ GE ]( numOut )( 0.0f )
-//               val sca     = (numOut - 1).toFloat / (numIn - 1)
-//               sig.outputs.zipWithIndex.foreach { tup =>
-//                  val (sigIn, inCh) = tup
-//                  val outCh         = inCh * sca
-//                  val fr            = outCh % 1f
-//                  val outChI        = outCh.toInt
-//                  if( fr == 0f ) {
-//                     sigOut( outChI ) += sigIn
-//                  } else {
-//                     sigOut( outChI )     += sigIn * (1 - fr).sqrt
-//                     sigOut( outChI + 1 ) += sigIn * fr.sqrt
-//                  }
-//               }
                val sigOut = SplayAz.ar( numOut, sig )
                Limiter.ar( sigOut, (-0.2).dbamp )
             }
@@ -1083,33 +1069,31 @@ object Nuages extends TabletListener {
          }
          // master + people meters
          val meterTr    = Impulse.kr( 20 )
-         //val trigA    = Trig1.ar( meterTr, SampleDur.ir )
          val (peoplePeak: GE, peopleRMS: GE) = {
             val res = PEOPLE_CHANGROUPS.map { group =>
                val (_, off, numIn)  = group
                val pSig       = In.ar( NumOutputBuses.ir + off, numIn )
                val peak       = Peak.kr( pSig, meterTr ) // .outputs
-//               val peakM      = peak.tail.foldLeft[ GE ]( peak.head )( _ max _ ) \ 0
                val peakM      = Reduce.max( peak )
                val rms        = A2K.kr( Lag.ar( pSig.squared, 0.1 ))
-//               val rmsM       = (Mix( rms ) / numIn) \ 0
                val rmsM       = Mix.mono( rms ) / numIn
                (peakM, rmsM)
-//               (Constant( 0 ), Constant( 0 ))
             }
             res.map( _._1 ) -> res.map( _._2 )  // elegant it's not
          }
          val masterPeak    = Peak.kr( sig, meterTr )
          val masterRMS     = A2K.kr( Lag.ar( sig.squared, 0.1 ))
-//         val peak       = masterPeak.outputs ++ peoplePeak
-//         val rms        = masterRMS.outputs  ++ peopleRMS
          val peak: GE      = Seq( masterPeak, peoplePeak )
          val rms: GE       = Seq( masterRMS, peopleRMS )
-//         val meterData     = (peak zip rms).flatMap( tup => tup._1 :: tup._2 :: Nil )
          val meterData     = Zip( peak, rms )
          SendReply.kr( meterTr,  meterData, "/meters" )
       }
       synPostM = dfPostM.play( s, addAction = addToTail )
+}
+      catch {
+         case e =>
+            e.printStackTrace()
+      }
 
 //      if( GAGA6000 ) {
 //         require( MASTER_NUMCHANNELS == 8 )
