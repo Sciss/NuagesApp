@@ -1045,7 +1045,8 @@ object Nuages extends TabletListener {
             val recPath = new File( new File( REC_PATH, "mitschnitt" ), df.format( new java.util.Date() ))
 //            DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.IRCAM ).id, in )
             DiskOut.ar( bufRecord( recPath.getAbsolutePath, in.numOutputs, AudioFileType.IRCAM, SampleFormat.Float ).id, in )
-            0.0  // this sucks...
+//            0.0  // this sucks...
+Silent.ar
          }
       }
 

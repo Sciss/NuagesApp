@@ -52,15 +52,6 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/audiowidgets_2.9.1/audiowidgets_2.9.1-0.10-SNAPSHOT.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
           <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/scalainterpreterpane_2.9.1/scalainterpreterpane_2.9.1-0.18.jar!/" />
         </CLASSES>
         <JAVADOC />
@@ -80,15 +71,6 @@
       <library>
         <CLASSES>
           <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/scalacollider_2.9.1/scalacollider_2.9.1-0.30-SNAPSHOT.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/scalaaudiowidgets_2.9.1/scalaaudiowidgets_2.9.1-0.10-SNAPSHOT.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
@@ -152,6 +134,24 @@
       <library>
         <CLASSES>
           <root url="jar://$MODULE_DIR$/lib/TabletWrapper.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/scalaaudiowidgets_2.9.1/scalaaudiowidgets_2.9.1-0.10.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/audiowidgets_2.9.1/audiowidgets_2.9.1-0.10.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
