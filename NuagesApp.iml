@@ -34,15 +34,6 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/prefuse-core/prefuse-core-0.20.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
           <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/fscapejobs_2.9.1/fscapejobs_2.9.1-0.16.jar!/" />
         </CLASSES>
         <JAVADOC />
@@ -152,6 +143,15 @@
       <library>
         <CLASSES>
           <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/audiowidgets_2.9.1/audiowidgets_2.9.1-0.10.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib_managed/jars/de.sciss/prefuse-core/prefuse-core-0.21.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
