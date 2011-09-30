@@ -38,7 +38,7 @@ import java.awt.event.MouseEvent
 import collection.breakOut
 import osc.OSCResponder
 import java.io.File
-import Setup._
+import NuagesApp._
 import de.sciss.nuages.{NuagesPanel, NuagesFrame}
 import de.sciss.osc.Message
 import collection.immutable.{IndexedSeq => IIdxSeq}
@@ -46,18 +46,10 @@ import de.sciss.synth.io.{AudioFileType, SampleFormat}
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-/**
- *    @version 0.11, 02-Oct-10
- */
-object Nuages extends TabletListener {
+object NuagesProcs extends TabletListener {
    import DSL._
-//   import NuagesDSL._
 
-//   val GAGA6000      = false
-   val GAGA_THRESH   = -18
-   val GAGA_RATIO    = 1.0 / 10
-
-   var freesoundFile : Option[ String ] = None
+   var tapePath : Option[ String ] = None
    var f : NuagesFrame = null
    var synPostM : Synth = null
    var server : Server = null
@@ -71,12 +63,12 @@ object Nuages extends TabletListener {
       val loopBufs   = Array.fill[ Buffer ]( NUM_LOOPS )( Buffer.alloc( s, loopFrames, 2 ))
       val loopBufIDs: Seq[ Int ] = loopBufs.map( _.id )( breakOut )
 
-      gen( if( FREESOUND ) "free" else "tape" ) {
+      gen( "tape" ) {
          val pspeed  = pAudio( "speed", ParamSpec( 0.1f, 10, ExpWarp ), 1 )
          val ploop   = pScalar( "loop", ParamSpec( 0, 1, LinWarp, 1 ), 0 )
          val ppos    = pScalar( "pos", ParamSpec( 0, 1 ), 0 )
          graph {
-            val path      = freesoundFile.getOrElse( sys.error( "No audiofile selected" ))
+            val path      = tapePath.getOrElse( sys.error( "No audiofile selected" ))
             val spec      = audioFileSpec( path )
             val numFrames = spec.numFrames
             val startPos  = ppos.v
@@ -145,7 +137,7 @@ object Nuages extends TabletListener {
 //      gen( "at_2aside" ) {
 //         val p1  = pAudio( "speed", ParamSpec( 0.1f, 10f, ExpWarp ), 1 )
 //         graph {
-//            val b   = bufCue( Setup.BASE_PATH + "sciss/2A-SideBlossCon2A-SideBloss.aif" )
+//            val b   = bufCue( NuagesApp.BASE_PATH + "sciss/2A-SideBlossCon2A-SideBloss.aif" )
 //            HPF.ar( VDiskIn.ar( b.numChannels, b.id, p1.ar * BufRateScale.ir( b.id ), loop = 1 ), 30 )
 //         }
 //      }
@@ -279,7 +271,7 @@ object Nuages extends TabletListener {
 //          val pboost  = pAudio( "gain", ParamSpec( 0.1, 10, ExpWarp ), 0.1 /* 1 */)
 //
 //          graph {
-//             val off        = Setup.ROBERT_OFFSET // if( Setup.INTERNAL_AUDIO ) 0 else Setup.MIC_OFFSET
+//             val off        = NuagesApp.ROBERT_OFFSET // if( NuagesApp.INTERNAL_AUDIO ) 0 else NuagesApp.MIC_OFFSET
 //             val boost      = pboost.ar
 //             val pureIn	   = In.ar( NumOutputBuses.ir + off, 2 ) * boost
 ////             val st: GE = pureIn :: pureIn :: Nil
@@ -1096,25 +1088,13 @@ Silent.ar
 //            e.printStackTrace()
 //      }
 
-//      if( GAGA6000 ) {
-//         require( MASTER_NUMCHANNELS == 8 )
-//         val eqDef = SynthDef( "eq" ) {
-//            val sig     = In.ar( MASTER_OFFSET, 6 )
-//            val trnsIn  = HPF.ar( sig.outputs.take( 3 ), 60 )
-//            val jbl     = HPF.ar( sig.outputs.drop( 3 ), 30 )
-//            val trns    = Compander.ar( trnsIn, trnsIn, GAGA_THRESH.dbamp, ratioAbove = GAGA_RATIO, attack = 0.01, release = 0.1 )
-//            ReplaceOut.ar( MASTER_OFFSET, trns.outputs ++ jbl.outputs )
-//         }
-//         eqDef.play( s, addAction = addAfter )
-//      }
-
       // tablet
       this.f = f
       if( USE_TABLET ) {
 //         new java.util.Timer().schedule( new TimerTask {
 //            def run {
                val inst = TabletWrapper.getInstance
-               inst.addTabletListener( Nuages )
+               inst.addTabletListener( NuagesProcs )
 //               inst.removeTabletListener( this )
 //               inst.addTabletListener( this )
       println(" TABLET ")
@@ -1145,68 +1125,9 @@ Silent.ar
             wasInstant = true
          }
       }
-
-
-//      switch( e.getID() ) {
-//      case MouseEvent.MOUSE_DRAGGED:
-//         // ignore messages that originate from drags that started outside the view
-//         if( !pressed ) return;
-//         break;
-//      case MouseEvent.MOUSE_MOVED:
-//         // ignore messages that originate from moves that left the view
-//         if( !inside ) return;
-//         break;
-//      case MouseEvent.MOUSE_PRESSED:
-//         // ignore messages that originate from clicking outside the view
-//         if( !inside ) return;
-//         break;
-//      case MouseEvent.MOUSE_RELEASED:
-//         // ignore messages that originate from clicking outside the view
-//         if( !pressed ) return;
-//         break;
-//      default:
-//         break;
-//      }
-
-//      for( Iterator iter = listeners.iterator(); iter.hasNext(); ) {
-//         ((TabletListener) iter.next()).tabletEvent( e );
-//      }
-
-//		println( "TabletEvent" )
-//		System.out.println( "  id                         " + e.getID() );
-//		System.out.println( "  x                          " + e.getX() );
-//		System.out.println( "  y                          " + e.getY() );
-//		System.out.println( "  absoluteY                  " + e.getAbsoluteY() );
-//		System.out.println( "  absoluteX                  " + e.getAbsoluteX() );
-//		System.out.println( "  absoluteZ                  " + e.getAbsoluteZ() );
-//		System.out.println( "  buttonMask                 " + e.getButtonMask() );
-//		System.out.println( "  pressure                   " + e.getPressure() );
-//		System.out.println( "  rotation                   " + e.getRotation() );
-//		System.out.println( "  tiltX                      " + e.getTiltX() );
-//		System.out.println( "  tiltY                      " + e.getTiltY() );
-//		System.out.println( "  tagentialPressure         " + e.getTagentialPressure() );
-//		System.out.println( "  vendorDefined1             " + e.getVendorDefined1() );
-//		System.out.println( "  vendorDefined2             " + e.getVendorDefined2() );
-//		System.out.println( "  vendorDefined3             " + e.getVendorDefined3() );
-//		System.out.println();
    }
 
    def tabletProximity( e: TabletProximityEvent ) {
-//      if( e.isEnteringProximity() ) {
-//         if( inside ) {
-//            lastEnterEvent	= null;
-//            dispatch( e );
-//            dispatchExit	= true;
-//         } else {
-//            lastEnterEvent	= e;
-//         }
-//      } else {
-//         if( dispatchExit ) {
-//            dispatchExit	= false;
-//            dispatch( e );
-//         }
-//      }
-
       if( DEBUG_PROXIMITY ) {
          println( "TabletProximityEvent" )
          println( "  capabilityMask             " + e.getCapabilityMask )

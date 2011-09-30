@@ -1,3 +1,5 @@
 h2. README
 
 An internal project of me, glueing together a working Wolkenpumpe for live improvisation. (C)opyright by Hanns Holger Rutz. All rights reserved. Covered by the GNU General Public License v2+ (see licenses folder).
+
+Due to the inclusion of JNITablet, this currently only works on OS X. Remove the tablet initialization on other platforms.

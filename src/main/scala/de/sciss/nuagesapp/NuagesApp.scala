@@ -1,8 +1,8 @@
 /*
- *  SMC.scala
+ *  NuagesApp.scala
  *  (NuagesApp)
  *
- *  Copyright (c) 2010 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2010-2011 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -29,13 +29,11 @@
 package de.sciss.nuagesapp
 
 import de.sciss.synth._
+import proc.{ProcTxn, ProcDemiurg}
 import swing.j.JServerStatusPanel
 import de.sciss.osc.Message
-import proc.ProcDemiurg
 import de.sciss.nuages.{TapesPanel, ControlPanel, NuagesConfig, NuagesFrame}
 
-//import de.sciss.freesound.swing.{SearchProgressFrame, SearchResultFrame, SearchQueryFrame, LoginFrame}
-//import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
 import osc.OSCResponder
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
@@ -43,35 +41,25 @@ import java.awt.event.{ActionEvent, KeyEvent}
 import java.awt.{Point, Toolkit, EventQueue, GraphicsEnvironment}
 import javax.swing.{AbstractAction, KeyStroke, JComponent, Box}
 import collection.breakOut
+import concurrent.stm.Txn
 
-object Setup extends Runnable {
+object NuagesApp extends Runnable {
+   def main( args: Array[ String ]) {
+      EventQueue.invokeLater( this )
+   }
+
    val fs                  = File.separator
-//   val BASE_PATH           = System.getProperty( "user.home" ) + fs + "Desktop" + fs + "CafeConcrete"
    val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
-//   val MASTER_NUMCHANNELS  = 6
-//   val MASTER_CHANGROUPS   = ("M", 0, 2) :: ("J", 2, 4) :: Nil // List[ Tuple3[ String, Int, Int ]] : suffix, offset, numChannels
-//   val MASTER_OFFSET       = 0
-//   val MIC_OFFSET          = 0
-//   val SOLO_OFFSET         = 10      // -1 for solo-off! 10 = MOTU 828 S/PDIF
-//   val SOLO_NUMCHANNELS    = 2
-//   val LUDGER_OFFSET       = 14     //  14 = MOTU 828 ADAT begin
-//   val LUDGER_NUMCHANNELS  = 2
-//   val REC_CHANGROUPS      = Some( 14 )   // -1 for none; 14 = MOTU 828 ADAT begin
-//   val ROBERT_OFFSET       = 4
    val METERS              = true
-   val FREESOUND           = false
-   val FREESOUND_OFFLINE   = true
    var masterBus : AudioBus = null
 
    private val PROP_BASEPATH           = "basepath"
-//   private val PROP_INTERNALAUDIO      = "internalaudio"
    private val PROP_INDEVICE           = "indevice"
    private val PROP_OUTDEVICE          = "outdevice"
    private val PROP_MASTERNUMCHANS     = "masternumchans"
    private val PROP_MASTEROFFSET       = "masteroffset"
    private val PROP_MASTERCHANGROUPS   = "masterchangroups"
-//   private val PROP_MICOFFSET          = "micoffset"
    private val PROP_SOLOOFFSET         = "solooffset"
    private val PROP_SOLONUMCHANS       = "solonumchans"
    private val PROP_RECCHANGROUPS      = "recchangroups"
@@ -89,13 +77,11 @@ object Setup extends Runnable {
       } else {
          prop.setProperty( PROP_BASEPATH,
             new File( new File( System.getProperty( "user.home" ), "Desktop" ), "Nuages" ).getAbsolutePath )
-//         prop.setProperty( PROP_INTERNALAUDIO, false.toString )
          prop.setProperty( PROP_INDEVICE, "" )
          prop.setProperty( PROP_OUTDEVICE, "" )
          prop.setProperty( PROP_MASTERNUMCHANS, 2.toString )
          prop.setProperty( PROP_MASTEROFFSET, 0.toString )
          prop.setProperty( PROP_MASTERCHANGROUPS, "" )
-//         prop.setProperty( PROP_MICOFFSET, 0.toString )
          prop.setProperty( PROP_MICCHANGROUPS, "" )
          prop.setProperty( PROP_SOLOOFFSET, (-1).toString )
          prop.setProperty( PROP_SOLONUMCHANS, 2.toString )
@@ -127,12 +113,9 @@ object Setup extends Runnable {
    val BASE_PATH           = properties.getProperty( PROP_BASEPATH )
    val TAPES_PATH          = BASE_PATH + fs + "tapes"
    val REC_PATH            = BASE_PATH + fs + "rec"
-//   val INTERNAL_AUDIO      = properties.getProperty( PROP_INTERNALAUDIO, false.toString ).toBoolean
    val MASTER_NUMCHANNELS  = properties.getProperty( PROP_MASTERNUMCHANS, 2.toString ).toInt
    val MASTER_OFFSET       = properties.getProperty( PROP_MASTEROFFSET, 0.toString ).toInt
    val MASTER_CHANGROUPS   = decodeGroup( PROP_MASTERCHANGROUPS )
-//   val MIC_OFFSET          = properties.getProperty( PROP_MICOFFSET, 0.toString ).toInt
-//   val MIC_NUMCHANNELS     = 2   // XXX should be configurable
    val SOLO_OFFSET         = properties.getProperty( PROP_SOLOOFFSET, (-1).toString ).toInt
    val SOLO_NUMCHANNELS    = properties.getProperty( PROP_SOLONUMCHANS, 2.toString ).toInt
    val REC_CHANGROUPS      = decodeGroup( PROP_RECCHANGROUPS )
@@ -159,10 +142,10 @@ object Setup extends Runnable {
       val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) :: (if( SOLO_OFFSET >= 0 ) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) ::
          REC_CHANGROUPS.map( g => g._2 + g._3 )).max
 
-      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
+//      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
 
-      o.inputBusChannels   = maxInIdx // 10
-      o.outputBusChannels  = maxOutIdx // 10
+      o.inputBusChannels   = maxInIdx
+      o.outputBusChannels  = maxOutIdx
       o.audioBusChannels   = 512
       o.loadSynthDefs      = false
       o.memorySize         = 65536
@@ -205,14 +188,18 @@ object Setup extends Runnable {
             val ctrlS = ControlPanel.SettingsBuilder()
             ctrlS.numOutputChannels = MASTER_NUMCHANNELS
             ctrlS.numInputChannels  = PEOPLE_CHANGROUPS.size
-            val ctrlP = new ControlPanel // ( filesPanel )
-            val ctrlB = Nuages.f.bottom
+            ctrlS.clockAction = (on, fun) => ProcTxn.spawnAtomic { implicit tx =>
+               val succ = if( on ) NuagesProcs.startRecorder else NuagesProcs.stopRecorder
+               if( succ ) tx.afterCommit( _ => fun() )
+            }
+            val ctrlP = new ControlPanel( ctrlS )
+            val ctrlB = NuagesProcs.f.bottom
             ctrlB.add( ssp )
             ctrlB.add( Box.createHorizontalStrut( 8 ))
             ctrlB.add( ctrlP )
             ctrlB.add( Box.createHorizontalStrut( 4 ))
 
-            val synPostMID = Nuages.synPostM.id
+            val synPostMID = NuagesProcs.synPostM.id
             OSCResponder.add({
                case Message( "/meters", `synPostMID`, 0, values @ _* ) =>
                   EventQueue.invokeLater( new Runnable { def run() { ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ])( breakOut ))}})
@@ -222,7 +209,6 @@ object Setup extends Runnable {
          }
       }
       Runtime.getRuntime.addShutdownHook( new Thread { override def run() = shutDown() })
-//      booting.start
    }
 
    private def initNuages( maxX: Int, maxY: Int ) {
@@ -232,7 +218,6 @@ object Setup extends Runnable {
       } else {
          None
       }
-//NuagesPanel.verbose = true
       config            = NuagesConfig( s, Some( masterChans ), soloBus, Some( REC_PATH ), true, collector = USE_COLLECTOR )
       val f             = new NuagesFrame( config )
       val np            = f.panel
@@ -242,30 +227,23 @@ object Setup extends Runnable {
       val y0 = SCREEN_BOUNDS.y + 22
       f.setBounds( SCREEN_BOUNDS.x, y0, maxX - SCREEN_BOUNDS.x, maxY - y0 )
       f.setUndecorated( true )
-//      f.setAlwaysOnTop( true )
-//      disp.zoom( new Point2D.Float( np.getWidth(), np.getHeight() ), 0.5 ) // don't ask me how these coordinates work
       f.setVisible( true )
 //      support.nuages = f
-      Nuages.init( s, f )
+      NuagesProcs.init( s, f )
 
       FScapeNuages.init( s, f )
    }
 
    private def installTapesPanel : JComponent = {
       val tapes = TapesPanel.fromFolder( new File( TAPES_PATH ))
-//      tapes.setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE )
-//      tapes.setAlwaysOnTop( true )
-//      tapes.setLocation( SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - (tapes.getWidth + 256),
-//         SCREEN_BOUNDS.y + ((SCREEN_BOUNDS.height - tapes.getHeight) >> 1) )
       tapes.addListener {
          case TapesPanel.SelectionChanged( sel @ _* ) => {
             val pathO = sel.headOption.map( _.file.getAbsolutePath )
-//println( "FS PATH = " + pathO )
-            Nuages.freesoundFile = pathO
+            NuagesProcs.tapePath = pathO
          }
       }
 
-      val p       = Nuages.f.panel
+      val p       = NuagesProcs.f.panel
       val imap    = p.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW )
       val amap    = p.getActionMap
       val tpName  = "tapes"

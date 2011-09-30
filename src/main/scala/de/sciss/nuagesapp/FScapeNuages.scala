@@ -2,7 +2,7 @@
  *  FScapeNuages.scala
  *  (NuagesApp)
  *
- *  Copyright (c) 2010 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2010-2011 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@ package de.sciss.nuagesapp
 import de.sciss.nuages.NuagesFrame
 import java.io.File
 import java.util.{Timer => UTimer, TimerTask}
-import Setup._
+import NuagesApp._
 import de.sciss.fscape.FScapeJobs
 import de.sciss.synth
 import synth._
