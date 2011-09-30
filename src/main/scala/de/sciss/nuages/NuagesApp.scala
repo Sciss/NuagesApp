@@ -36,6 +36,8 @@ import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
 import java.awt.{EventQueue, GraphicsEnvironment}
 import javax.swing.Box
+import collection.breakOut
+import collection.immutable.{IndexedSeq => IIdxSeq}
 
 object NuagesApp extends Runnable {
    def main( args: Array[ String ]) {
@@ -43,9 +45,7 @@ object NuagesApp extends Runnable {
    }
 
    val fs                  = File.separator
-   val AUTO_LOGIN          = true
    val NUAGES_ANTIALIAS    = false
-   val METERS              = true
    var masterBus : AudioBus = null
 
    private val PROP_BASEPATH           = "basepath"
@@ -88,19 +88,19 @@ object NuagesApp extends Runnable {
       prop
    }
 
-   def decodeGroup( prop: String ) : List[ (String, Int, Int) ] = {
+   def decodeGroup( prop: String ) : IIdxSeq[ NamedBusConfig ] = {
       val s = properties.getProperty( prop, "" )
       val r = """\x28(\w+),(\d+),(\d+)\x29""".r
       try {
          val l = r.findAllIn( s ).toList
-         l.map { s0 =>
+         l.map( s0 => {
             val Array( name, offS, chansS ) = s0.substring( 1, s0.length - 1 ).split( ',' )
-            (name, offS.toInt, chansS.toInt)
-         }
+            NamedBusConfig( name, offS.toInt, chansS.toInt )
+         })( breakOut )
       } catch { case e =>
          println( "Error matching value '" + s + "' for prop '" + prop + "' : " )
          e.printStackTrace()
-         Nil
+         IIdxSeq.empty
       }
    }
 
@@ -130,10 +130,10 @@ object NuagesApp extends Runnable {
       } else {
          o.deviceNames = Some( inDevice -> outDevice )
       }
-      val maxInIdx = (MIC_CHANGROUPS ++ PEOPLE_CHANGROUPS).map( g => g._2 + g._3 ).max
+      val maxInIdx = (MIC_CHANGROUPS ++ PEOPLE_CHANGROUPS).map( _.stopOffset ).max
 
-      val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) :: (if( SOLO_OFFSET >= 0 ) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) ::
-         REC_CHANGROUPS.map( g => g._2 + g._3 )).max
+      val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) +: (if( SOLO_OFFSET >= 0 ) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) +:
+         REC_CHANGROUPS.map( _.stopOffset )).max
 
 //      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
 
@@ -180,7 +180,9 @@ object NuagesApp extends Runnable {
 
             val recS    = NuagesRecorder.SettingsBuilder()
             recS.folder = new File( REC_PATH )
-            recS.bus    = RichBus.wrap( masterBus )
+            require( if( recS.folder.isDirectory ) recS.folder.canWrite else recS.folder.mkdirs(),
+               "Can't access live recording folder: " + REC_PATH )
+            recS.bus    = /* RichBus.wrap( */ masterBus /* ) */
             val rec     = NuagesRecorder( recS )
 
             val ctrlS = ControlPanel.SettingsBuilder()
@@ -202,6 +204,10 @@ object NuagesApp extends Runnable {
             procsS.frame            = f
             procsS.audioFilesFolder = Some( new File( BASE_PATH, "sciss" ))
             procsS.controlPanel     = Some( ctrl )
+            procsS.lineInputs       = PEOPLE_CHANGROUPS
+            procsS.micInputs        = MIC_CHANGROUPS
+            procsS.lineOutputs      = REC_CHANGROUPS
+            procsS.masterGroups     = MASTER_CHANGROUPS
             val procs               = new NuagesProcs( procsS )
             val tapes = TapesPanel.fromFolder( new File( TAPES_PATH ))
             tapes.installOn( f ) { list => procs.tapePath = list.headOption.map( _.file.getAbsolutePath )}
@@ -230,6 +236,8 @@ object NuagesApp extends Runnable {
       f.setUndecorated( true )
       f.setVisible( true )
 //      support.nuages = f
+
+      if( USE_TABLET ) NuagesTablet.init( f )
 
       f
    }
