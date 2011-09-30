@@ -15,6 +15,7 @@ object NuagesTablet {
          initialized = true
          val inst = TabletWrapper.getInstance
          inst.addTabletListener( new Listener( f ))
+         println( "Tablet initialized." )
       }
    }
 

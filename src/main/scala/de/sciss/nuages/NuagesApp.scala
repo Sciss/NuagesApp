@@ -29,24 +29,19 @@
 package de.sciss.nuages
 
 import de.sciss.synth._
-import proc.{ProcTxn, ProcDemiurg}
-import swing.j.JServerStatusPanel
+import proc.ProcTxn
 
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
-import java.awt.{EventQueue, GraphicsEnvironment}
-import javax.swing.Box
 import collection.breakOut
 import collection.immutable.{IndexedSeq => IIdxSeq}
 
-object NuagesApp extends Runnable {
-   def main( args: Array[ String ]) {
-      EventQueue.invokeLater( this )
-   }
+object NuagesApp {
+   def main( args: Array[ String ]) { launch() }
 
    val fs                  = File.separator
    val NUAGES_ANTIALIAS    = false
-   var masterBus : AudioBus = null
+//   var masterBus : AudioBus = null
 
    private val PROP_BASEPATH           = "basepath"
    private val PROP_INDEVICE           = "indevice"
@@ -120,9 +115,24 @@ object NuagesApp extends Runnable {
    val USE_TABLET          = true
    val DEBUG_PROXIMITY     = false
    val LOOP_DUR            = 30
-   
-   val options          = {
-      val o = new ServerOptionsBuilder()
+
+   def launch() {
+      val cfg = NuagesLauncher.SettingsBuilder()
+      cfg.masterChannels   = Some( MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS) )
+      cfg.soloChannels     = if( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0) ) {
+         Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) )
+      } else {
+         None
+      }
+      cfg.collector        = USE_COLLECTOR
+      cfg.antiAliasing     = NUAGES_ANTIALIAS
+      cfg.tapeAction       = list => procs.foreach( _.tapePath = list.headOption.map( _.file.getAbsolutePath ))
+      cfg.doneAction       = booted _
+      cfg.tapeFolder       = Some( new File( TAPES_PATH ))
+      cfg.fullScreenKey    = true
+
+      // server options
+      val o          = cfg.serverOptions
       val inDevice   = properties.getProperty( PROP_INDEVICE, "" )
       val outDevice  = properties.getProperty( PROP_OUTDEVICE, "" )
       if( inDevice == outDevice ) {
@@ -135,126 +145,34 @@ object NuagesApp extends Runnable {
       val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) +: (if( SOLO_OFFSET >= 0 ) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) +:
          REC_CHANGROUPS.map( _.stopOffset )).max
 
-//      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
-
       o.inputBusChannels   = maxInIdx
       o.outputBusChannels  = maxOutIdx
-      o.audioBusChannels   = 512
-      o.loadSynthDefs      = false
-      o.memorySize         = 65536
-      o.zeroConf           = false
-      o.build
+//      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
+
+      NuagesLauncher( cfg )   // booom!
    }
 
-   lazy val SCREEN_BOUNDS =
-      GraphicsEnvironment.getLocalGraphicsEnvironment.getDefaultScreenDevice.getDefaultConfiguration.getBounds
+   private var procs = Option.empty[ NuagesProcs ] // hmmm... not so nice
 
-   @volatile var s: Server       = _
-   @volatile var booting: ServerConnection = _
-   @volatile var config: NuagesConfig = _
-
-//   val support = new REPLSupport
-
-   def run() {
-      // prevent actor starvation!!!
-      // --> http://scala-programming-language.1934581.n4.nabble.com/Scala-Actors-Starvation-td2281657.html
-      System.setProperty( "actors.enableForkJoin", "false" )
-
-      val ssp  = new JServerStatusPanel( JServerStatusPanel.COUNTS )
-      val maxX = SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 48
-      val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - 35 /* sspw.getHeight() + 3 */
-
-      booting = Server.boot( options = options ) {
-         case ServerConnection.Preparing( srv ) => {
-            ssp.server = Some( srv )
-//            ntp.server = Some( srv )
-         }
-         case ServerConnection.Running( srv ) => {
-            ProcDemiurg.addServer( srv )
-            s = srv
-//            support.s = srv
-
-            // nuages
-            val f       = initNuages( maxX, maxY )
-            initFScape( s, f )
-
-            val recS    = NuagesRecorder.SettingsBuilder()
-            recS.folder = new File( REC_PATH )
-            require( if( recS.folder.isDirectory ) recS.folder.canWrite else recS.folder.mkdirs(),
-               "Can't access live recording folder: " + REC_PATH )
-            recS.bus    = /* RichBus.wrap( */ masterBus /* ) */
-            val rec     = NuagesRecorder( recS )
-
-            val ctrlS = ControlPanel.SettingsBuilder()
-            ctrlS.numOutputChannels = MASTER_NUMCHANNELS
-            ctrlS.numInputChannels  = PEOPLE_CHANGROUPS.size
-            ctrlS.clockAction = (on, fun) => ProcTxn.spawnAtomic { implicit tx =>
-               val succ = if( on ) rec.start else rec.stop
-               if( succ ) tx.afterCommit( _ => fun() )
-            }
-            val ctrl = ControlPanel( ctrlS )
-            val ctrlB = f.bottom
-            ctrlB.add( ssp )
-            ctrlB.add( Box.createHorizontalStrut( 8 ))
-            ctrlB.add( ctrl )
-            ctrlB.add( Box.createHorizontalStrut( 4 ))
-
-            val procsS              = NuagesProcs.SettingsBuilder()
-            procsS.server           = s
-            procsS.frame            = f
-            procsS.audioFilesFolder = Some( new File( BASE_PATH, "sciss" ))
-            procsS.controlPanel     = Some( ctrl )
-            procsS.lineInputs       = PEOPLE_CHANGROUPS
-            procsS.micInputs        = MIC_CHANGROUPS
-            procsS.lineOutputs      = REC_CHANGROUPS
-            procsS.masterGroups     = MASTER_CHANGROUPS
-            val procs               = new NuagesProcs( procsS )
-            val tapes = TapesPanel.fromFolder( new File( TAPES_PATH ))
-            tapes.installOn( f ) { list => procs.tapePath = list.headOption.map( _.file.getAbsolutePath )}
-
-            ProcTxn.atomic { implicit tx => procs.init }
-         }
-      }
-      Runtime.getRuntime.addShutdownHook( new Thread { override def run() = shutDown() })
-   }
-
-   private def initNuages( maxX: Int, maxY: Int ) : NuagesFrame = {
-      val masterChans   = (MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS ))
-      val soloBus       = if( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0) ) {
-         Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) )
-      } else {
-         None
-      }
-      config            = NuagesConfig( s, Some( masterChans ), soloBus, Some( REC_PATH ), true, collector = USE_COLLECTOR )
-      val f             = new NuagesFrame( config )
-      val np            = f.panel
-      masterBus         = np.masterBus.get // XXX not so elegant
-      val disp          = np.display
-      disp.setHighQuality( NUAGES_ANTIALIAS )
-      val y0 = SCREEN_BOUNDS.y + 22
-      f.setBounds( SCREEN_BOUNDS.x, y0, maxX - SCREEN_BOUNDS.x, maxY - y0 )
-      f.setUndecorated( true )
-      f.setVisible( true )
-//      support.nuages = f
-
-      if( USE_TABLET ) NuagesTablet.init( f )
-
-      f
-   }
-
-   private def initFScape( server: Server, frame: NuagesFrame ) {
-      NuagesFScape.init( server, frame )
+   private def booted( r: NuagesLauncher.Ready ) {
+      NuagesFScape.init( r.server, r.frame )
       NuagesFScape.fsc.connect()( succ => println( if( succ ) "FScape connected." else "!ERROR! : FScape not connected" ))
-   }
 
-   private def shutDown() { // sync.synchronized { }
-      if( (s != null) && (s.condition != Server.Offline) ) {
-         s.quit
-         s = null
-      }
-      if( booting != null ) {
-         booting.abort
-         booting = null
-      }
+      val procsS              = NuagesProcs.SettingsBuilder()
+      procsS.server           = r.server
+      procsS.frame            = r.frame
+      procsS.audioFilesFolder = Some( new File( BASE_PATH, "sciss" ))
+      procsS.controlPanel     = Some( r.controlPanel )
+      procsS.lineInputs       = PEOPLE_CHANGROUPS
+      procsS.micInputs        = MIC_CHANGROUPS
+      procsS.lineOutputs      = REC_CHANGROUPS
+      procsS.masterGroups     = MASTER_CHANGROUPS
+      val p                   = new NuagesProcs( procsS )
+
+      ProcTxn.spawnAtomic { implicit tx => p.init }
+
+      if( USE_TABLET ) NuagesTablet.init( r.frame )
+
+      procs = Some( p )
    }
 }
