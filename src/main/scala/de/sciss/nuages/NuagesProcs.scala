@@ -26,7 +26,7 @@
  *  Changelog:
  */
 
-package de.sciss.nuagesapp
+package de.sciss.nuages
 
 import de.sciss.synth._
 import Env.{Seg => S}
@@ -39,7 +39,6 @@ import collection.breakOut
 import osc.OSCResponder
 import java.io.File
 import NuagesApp._
-import de.sciss.nuages.{NuagesPanel, NuagesFrame}
 import de.sciss.osc.Message
 import collection.immutable.{IndexedSeq => IIdxSeq}
 import de.sciss.synth.io.{AudioFileType, SampleFormat}
@@ -54,8 +53,15 @@ object NuagesProcs extends TabletListener {
    var synPostM : Synth = null
    var server : Server = null
 
-   def init( s: Server, f: NuagesFrame ) = ProcTxn.atomic { implicit tx =>
+   def init( s: Server, f: NuagesFrame ) {
       server = s
+      this.f = f
+      ProcTxn.atomic { implicit tx => initProcs }
+      initMaster()
+      initTablet()
+   }
+
+   private def initProcs( implicit tx: ProcTxn ) {
       // -------------- GENERATORS --------------
 
       // NuagesUMic
@@ -1041,8 +1047,9 @@ object NuagesProcs extends TabletListener {
 Silent.ar
          }
       }
+   }
 
-//try {
+   private def initMaster() {
       val dfPostM = SynthDef( "post-master" ) {
          val sig = In.ar( masterBus.index, masterBus.numChannels )
          // externe recorder
@@ -1082,14 +1089,10 @@ Silent.ar
          SendReply.kr( meterTr, meterData, "/meters" )
       }
       synPostM = dfPostM.play( s, addAction = addToTail )
-//}
-//      catch {
-//         case e =>
-//            e.printStackTrace()
-//      }
+   }
 
+   private def initTablet() {
       // tablet
-      this.f = f
       if( USE_TABLET ) {
 //         new java.util.Timer().schedule( new TimerTask {
 //            def run {

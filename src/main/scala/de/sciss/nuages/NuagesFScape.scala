@@ -26,7 +26,7 @@
  *  Changelog:
  */
 
-package de.sciss.nuagesapp
+package de.sciss.nuages
 
 import de.sciss.nuages.NuagesFrame
 import java.io.File
@@ -39,7 +39,7 @@ import proc.{LinWarp, ExpWarp, DSL, Proc, ParamSpec, ProcTxn}
 import ugen._
 import DSL._
 
-object FScapeNuages {
+object NuagesFScape {
    lazy val fsc = FScapeJobs()
 
    private var cnt = 0
