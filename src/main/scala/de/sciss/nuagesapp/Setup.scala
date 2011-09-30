@@ -32,16 +32,16 @@ import de.sciss.synth._
 import swing.j.JServerStatusPanel
 import de.sciss.osc.Message
 import proc.ProcDemiurg
+import de.sciss.nuages.{TapesPanel, ControlPanel, NuagesConfig, NuagesFrame}
+
 //import de.sciss.freesound.swing.{SearchProgressFrame, SearchResultFrame, SearchQueryFrame, LoginFrame}
 //import de.sciss.freesound.{Search, Login, Sample, SampleInfoCache}
 import osc.OSCResponder
-import de.sciss.scalainterpreter.LogPane
 import java.util.Properties
-import java.io.{FileOutputStream, FileInputStream, PrintStream, File}
-import de.sciss.nuages.{NuagesConfig, NuagesFrame}
+import java.io.{FileOutputStream, FileInputStream, File}
 import java.awt.event.{ActionEvent, KeyEvent}
-import java.awt.{Point, Toolkit, Font, EventQueue, GraphicsEnvironment}
-import javax.swing.{AbstractAction, KeyStroke, JScrollPane, JComponent, Box}
+import java.awt.{Point, Toolkit, EventQueue, GraphicsEnvironment}
+import javax.swing.{AbstractAction, KeyStroke, JComponent, Box}
 import collection.breakOut
 
 object Setup extends Runnable {
@@ -154,15 +154,6 @@ object Setup extends Runnable {
       } else {
          o.deviceNames = Some( inDevice -> outDevice )
       }
-//      if( INTERNAL_AUDIO ) {
-//         o.deviceNames        = Some( "Built-in Microphone" -> "Built-in Output" )
-//      } else {
-//         o.deviceName         = Some( "MOTU 828mk2" )
-//      }
-
-//      val maxInIdx = ((MIC_OFFSET + MIC_NUMCHANNELS) ::
-//         PEOPLE_CHANGROUPS.map( g => g._2 + g._3 )).max
-
       val maxInIdx = (MIC_CHANGROUPS ++ PEOPLE_CHANGROUPS).map( g => g._2 + g._3 ).max
 
       val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) :: (if( SOLO_OFFSET >= 0 ) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) ::
@@ -186,45 +177,17 @@ object Setup extends Runnable {
    @volatile var booting: ServerConnection = _
    @volatile var config: NuagesConfig = _
 
-   val support = new REPLSupport
+//   val support = new REPLSupport
 
-   val logPane = {
-      val res = new LogPane( 2, 30 )
-      res.init
-      val scroll = res.getComponent( 0 ).asInstanceOf[ JScrollPane ]
-      scroll.setBorder( null )
-      scroll.getViewport.getView.setFont( new Font( "Menlo", Font.PLAIN, 8 ))
-      val printStream = new PrintStream( res.outputStream )
-      System.setErr( printStream )
-      System.setOut( printStream )
-//      ggLog.writer.write( "Make noise.\n" )
-      Console.setErr( res.outputStream )
-      Console.setOut( res.outputStream )
-      res
-   }
-   
-   def run {
+   def run() {
       // prevent actor starvation!!!
       // --> http://scala-programming-language.1934581.n4.nabble.com/Scala-Actors-Starvation-td2281657.html
       System.setProperty( "actors.enableForkJoin", "false" )
 
-//      val sif  = new ScalaInterpreterFrame( support /* ntp */ )
       val ssp  = new JServerStatusPanel( JServerStatusPanel.COUNTS )
-//      val sspw = ssp.makeWindow( undecorated = true )
-//      sspw.pack()
-
       val maxX = SCREEN_BOUNDS.x + SCREEN_BOUNDS.width - 48
       val maxY = SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - 35 /* sspw.getHeight() + 3 */
-//      sspw.setLocation( SCREEN_BOUNDS.x - 3, maxY - 1 )
 
-//      val ntp  = new NodeTreePanel()
-//      val ntpw = ntp.makeWindow
-//      ntpw.setLocation( sspw.getX, sspw.getY + sspw.getHeight + 32 )
-//      sspw.setVisible( true )
-//      ntpw.setVisible( true )
-
-//      sif.setLocation( sspw.getX + sspw.getWidth + 32, sif.getY )
-//      sif.setVisible( true )
       booting = Server.boot( options = options ) {
          case ServerConnection.Preparing( srv ) => {
             ssp.server = Some( srv )
@@ -233,35 +196,21 @@ object Setup extends Runnable {
          case ServerConnection.Running( srv ) => {
             ProcDemiurg.addServer( srv )
             s = srv
-            support.s = srv
+//            support.s = srv
 
             // nuages
             initNuages( maxX, maxY )
 
-            // freesound
-//            val filesPanel =
-//               if( FREESOUND ) {
-//               val cred  = new RandomAccessFile( BASE_PATH + fs + "cred.txt", "r" )
-//               val credL = cred.readLine().split( ":" )
-//               cred.close()
-//               initFreesound( credL( 0 ), credL( 1 ))
-//            } else {
-               installTapesPanel
-//            }
+            installTapesPanel
+            val ctrlS = ControlPanel.SettingsBuilder()
+            ctrlS.numOutputChannels = MASTER_NUMCHANNELS
+            ctrlS.numInputChannels  = PEOPLE_CHANGROUPS.size
             val ctrlP = new ControlPanel // ( filesPanel )
-//            val ctrlF = new JFrame()
-//            ctrlF.setUndecorated( true )
-//            val ctrlB = Box.createHorizontalBox()
             val ctrlB = Nuages.f.bottom
             ctrlB.add( ssp )
             ctrlB.add( Box.createHorizontalStrut( 8 ))
             ctrlB.add( ctrlP )
             ctrlB.add( Box.createHorizontalStrut( 4 ))
-//            ctrlF.setContentPane( ctrlB )
-//            ctrlF.pack()
-//            ctrlF.setBounds( SCREEN_BOUNDS.x - 1, SCREEN_BOUNDS.y + SCREEN_BOUNDS.height - ctrlF.getHeight() + 2,
-//               maxX - SCREEN_BOUNDS.x + 1, ctrlF.getHeight() )
-//            ctrlF.setVisible( true )
 
             val synPostMID = Nuages.synPostM.id
             OSCResponder.add({
@@ -296,7 +245,7 @@ object Setup extends Runnable {
 //      f.setAlwaysOnTop( true )
 //      disp.zoom( new Point2D.Float( np.getWidth(), np.getHeight() ), 0.5 ) // don't ask me how these coordinates work
       f.setVisible( true )
-      support.nuages = f
+//      support.nuages = f
       Nuages.init( s, f )
 
       FScapeNuages.init( s, f )
@@ -331,91 +280,6 @@ object Setup extends Runnable {
 
       tapes
    }
-
-//   private def newFreesoundResultsFrame( title: String, samples: IIdxSeq[ Sample ], login: Option[ Login ],
-//                                          icache: Option[ SampleInfoCache ], downloadPath: Option[ String ]) : JFrame = {
-//      val srf = new SearchResultFrame( samples, login, title, icache, downloadPath )
-//      srf.setLocationRelativeTo( null )
-//      srf.setVisible( true )
-//      var checked = Set.empty[ String ]
-//      srf.addListener {
-//         case SearchResultFrame.SelectionChanged( sel @ _* ) => {
-////println( "SELECTION = " + sel )
-//            val pathO = sel.headOption.flatMap( _.download.flatMap( path => {
-////println( "AQUI " + path )
-//               if( checked.contains( path )) Some( path ) else {
-//                  try {
-//                     val spec = AudioFile.readSpec( path )
-//                     if( spec.numChannels > 0 && spec.numChannels <= 2 ) {
-//                        checked += path
-//                        Some( path )
-//                     } else None
-//                  } catch { case e => None }
-//               }
-//            }))
-//println( "FS PATH = " + pathO )
-//            Nuages.freesoundFile = pathO
-//         }
-//      }
-//
-//      srf
-//   }
-//
-//   private def initFreesound( username: String, password: String ) : JFrame = {
-//      val icachePath = BASE_PATH + fs + "infos"
-//      val icache = Some( SampleInfoCache.persistent( icachePath ))
-//      val downloadPath = Some( BASE_PATH + fs + "samples" )
-//      val f = new LoginFrame()
-//
-//      f.setDefaultCloseOperation( WindowConstants.EXIT_ON_CLOSE )
-//      f.setLocation( 0, SCREEN_BOUNDS.height - f.getHeight )
-//      f.setVisible( true )
-//      f.username  = username
-//      f.password_=( password )
-//      f.addListener {
-//         case LoginFrame.LoggedIn( login ) => {
-//            support.login = login
-//            val sqf = new SearchQueryFrame( f, login )
-//            sqf.setLocationRelativeTo( null )
-////            sqf.setLocation( sqf.getX(), 40 )
-//            sqf.setLocation( f.getX + f.getWidth, SCREEN_BOUNDS.height - sqf.getHeight )
-//            sqf.setVisible( true )
-//            sqf.addListener {
-//               case SearchQueryFrame.NewSearch( idx, search ) => {
-//                  val title = "Freesound Search #" + idx + " (" + {
-//                        val kw = search.options.keyword
-//                        if( kw.size < 24 ) kw else kw.take( 23 ) + "…"
-//                     } + ")"
-//                  val spf = new SearchProgressFrame( sqf, search, title )
-//                  spf.setLocationRelativeTo( null )
-//                  spf.setVisible( true )
-//                  spf.addListener {
-//                     case Search.SearchDone( samples ) => {
-//                        newFreesoundResultsFrame( title, samples, Some( login ), icache, downloadPath )
-//                     }
-//                  }
-//               }
-//            }
-//         }
-//      }
-//      if( FREESOUND_OFFLINE ) {
-//         val samples: IIdxSeq[ Sample ] = new File( icachePath ).listFiles().map({ f =>
-//            val n = f.getName
-//            if( n.startsWith( "info" ) && n.endsWith( ".xml" )) {
-//               val mid = n.substring( 4, n.length() - 4 )
-//               try {
-//                  Some( mid.toLong )
-//               }
-//               catch { case e => None }
-//            } else None
-//         }).collect({ case Some( id ) => Sample( id )})( breakOut )
-//         newFreesoundResultsFrame( "Freesound Cache", samples, None, icache, downloadPath )
-//      }
-//
-//      if( AUTO_LOGIN ) f.performLogin
-//
-//      f
-//   }
 
    private def shutDown() { // sync.synchronized { }
       if( (s != null) && (s.condition != Server.Offline) ) {

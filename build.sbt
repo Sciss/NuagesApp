@@ -9,7 +9,7 @@ organization := "de.sciss"
 scalaVersion := "2.9.1"
 
 libraryDependencies ++= Seq(
-   "de.sciss" %% "wolkenpumpe" % "0.30-SNAPSHOT",
+   "de.sciss" %% "nuagespompe" % "0.10-SNAPSHOT",
    "de.sciss" %% "fscapejobs" % "0.16"
 )
 
