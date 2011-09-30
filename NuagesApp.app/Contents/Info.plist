@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleGetInfoString</key>
-	<string>NuagesApp 0.10. Copyright © 2010 by Hanns Holger Rutz. All rights reserved.</string>
+	<string>NuagesApp 0.30. Copyright © 2010-2011 by Hanns Holger Rutz. All rights reserved.</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.10</string>
+	<string>0.30</string>
 	<key>CFBundleName</key>
 	<string>NuagesApp</string>
 	<key>CFBundleIdentifier</key>
-	<string>de.sciss.nuagesapp</string>
+	<string>de.sciss.nuages</string>
 	<key>CFBundleVersion</key>
-	<string>0.10</string>
+	<string>0.30</string>
 	<key>CFBundleAllowMixedLocalizations</key>
 	<string>true</string>
 	<key>CFBundleExecutable</key>
@@ -38,23 +38,25 @@
 		<key>VMOptions</key>
 		<string>-ea</string>
 		<key>MainClass</key>
-		<string>de.sciss.nuagesapp.Main</string>
+		<string>de.sciss.nuages.NuagesApp</string>
 		<key>JVMVersion</key>
 		<string>1.6+</string>
 		<key>ClassPath</key>
 		<array>
+			<string>$JAVAROOT/audiowidgets.jar</string>
 			<string>$JAVAROOT/fscapejobs.jar</string>
 			<string>$JAVAROOT/jsyntaxpane.jar</string>
 			<string>$JAVAROOT/nuagesapp.jar</string>
-			<string>$JAVAROOT/prefuse.jar</string>
+			<string>$JAVAROOT/nuagespompe.jar</string>
+			<string>$JAVAROOT/prefuse-core.jar</string>
 			<string>$JAVAROOT/scala-compiler.jar</string>
 			<string>$JAVAROOT/scala-library.jar</string>
-			<string>$JAVAROOT/scala-stm_2.9.0-0.3.jar</string>
+			<string>$JAVAROOT/scala-stm.jar</string>
+			<string>$JAVAROOT/scala-swing.jar</string>
 			<string>$JAVAROOT/scalaaudiofile.jar</string>
+			<string>$JAVAROOT/scalaaudiowidgets.jar</string>
 			<string>$JAVAROOT/scalacollider.jar</string>
 			<string>$JAVAROOT/scalacolliderswing.jar</string>
-			<string>$JAVAROOT/scalafreesound.jar</string>
-			<string>$JAVAROOT/scalafreesoundswing.jar</string>
 			<string>$JAVAROOT/scalainterpreterpane.jar</string>
 			<string>$JAVAROOT/scalaosc.jar</string>
 			<string>$JAVAROOT/soundprocesses.jar</string>
