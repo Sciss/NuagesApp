@@ -29,7 +29,7 @@
 package de.sciss.nuages
 
 import de.sciss.synth._
-import proc.{RichBus, ProcTxn, ProcDemiurg}
+import proc.{ProcTxn, ProcDemiurg}
 import swing.j.JServerStatusPanel
 
 import java.util.Properties
