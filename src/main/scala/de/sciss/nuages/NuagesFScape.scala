@@ -28,7 +28,6 @@
 
 package de.sciss.nuages
 
-import de.sciss.nuages.NuagesFrame
 import java.io.File
 import java.util.{Timer => UTimer, TimerTask}
 import NuagesApp._

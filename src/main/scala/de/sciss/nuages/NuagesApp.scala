@@ -29,19 +29,13 @@
 package de.sciss.nuages
 
 import de.sciss.synth._
-import proc.{ProcTxn, ProcDemiurg}
+import proc.{RichBus, ProcTxn, ProcDemiurg}
 import swing.j.JServerStatusPanel
-import de.sciss.osc.Message
-import de.sciss.nuages.{TapesPanel, ControlPanel, NuagesConfig, NuagesFrame}
 
-import osc.OSCResponder
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
-import java.awt.event.{ActionEvent, KeyEvent}
-import java.awt.{Point, Toolkit, EventQueue, GraphicsEnvironment}
-import javax.swing.{AbstractAction, KeyStroke, JComponent, Box}
-import collection.breakOut
-import concurrent.stm.Txn
+import java.awt.{EventQueue, GraphicsEnvironment}
+import javax.swing.Box
 
 object NuagesApp extends Runnable {
    def main( args: Array[ String ]) {
@@ -125,7 +119,6 @@ object NuagesApp extends Runnable {
 
    val USE_TABLET          = true
    val DEBUG_PROXIMITY     = false
-   val NUM_LOOPS           = 7
    val LOOP_DUR            = 30
    
    val options          = {
@@ -182,36 +175,44 @@ object NuagesApp extends Runnable {
 //            support.s = srv
 
             // nuages
-            initNuages( maxX, maxY )
+            val f       = initNuages( maxX, maxY )
+            initFScape( s, f )
 
-            installTapesPanel
+            val recS    = NuagesRecorder.SettingsBuilder()
+            recS.folder = new File( REC_PATH )
+            recS.bus    = RichBus.wrap( masterBus )
+            val rec     = NuagesRecorder( recS )
+
             val ctrlS = ControlPanel.SettingsBuilder()
             ctrlS.numOutputChannels = MASTER_NUMCHANNELS
             ctrlS.numInputChannels  = PEOPLE_CHANGROUPS.size
             ctrlS.clockAction = (on, fun) => ProcTxn.spawnAtomic { implicit tx =>
-               val succ = if( on ) NuagesProcs.startRecorder else NuagesProcs.stopRecorder
+               val succ = if( on ) rec.start else rec.stop
                if( succ ) tx.afterCommit( _ => fun() )
             }
-            val ctrlP = new ControlPanel( ctrlS )
-            val ctrlB = NuagesProcs.f.bottom
+            val ctrl = ControlPanel( ctrlS )
+            val ctrlB = f.bottom
             ctrlB.add( ssp )
             ctrlB.add( Box.createHorizontalStrut( 8 ))
-            ctrlB.add( ctrlP )
+            ctrlB.add( ctrl )
             ctrlB.add( Box.createHorizontalStrut( 4 ))
 
-            val synPostMID = NuagesProcs.synPostM.id
-            OSCResponder.add({
-               case Message( "/meters", `synPostMID`, 0, values @ _* ) =>
-                  EventQueue.invokeLater( new Runnable { def run() { ctrlP.meterUpdate( values.map( _.asInstanceOf[ Float ])( breakOut ))}})
-            }, s )
+            val procsS              = NuagesProcs.SettingsBuilder()
+            procsS.server           = s
+            procsS.frame            = f
+            procsS.audioFilesFolder = Some( new File( BASE_PATH, "sciss" ))
+            procsS.controlPanel     = Some( ctrl )
+            val procs               = new NuagesProcs( procsS )
+            val tapes = TapesPanel.fromFolder( new File( TAPES_PATH ))
+            tapes.installOn( f ) { list => procs.tapePath = list.headOption.map( _.file.getAbsolutePath )}
 
-            NuagesFScape.fsc.connect()( succ => println( if( succ ) "FScape connected." else "!ERROR! : FScape not connected" ))
+            ProcTxn.atomic { implicit tx => procs.init }
          }
       }
       Runtime.getRuntime.addShutdownHook( new Thread { override def run() = shutDown() })
    }
 
-   private def initNuages( maxX: Int, maxY: Int ) {
+   private def initNuages( maxX: Int, maxY: Int ) : NuagesFrame = {
       val masterChans   = (MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS ))
       val soloBus       = if( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0) ) {
          Some( (SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)) )
@@ -229,34 +230,13 @@ object NuagesApp extends Runnable {
       f.setUndecorated( true )
       f.setVisible( true )
 //      support.nuages = f
-      NuagesProcs.init( s, f )
 
-      NuagesFScape.init( s, f )
+      f
    }
 
-   private def installTapesPanel : JComponent = {
-      val tapes = TapesPanel.fromFolder( new File( TAPES_PATH ))
-      tapes.addListener {
-         case TapesPanel.SelectionChanged( sel @ _* ) => {
-            val pathO = sel.headOption.map( _.file.getAbsolutePath )
-            NuagesProcs.tapePath = pathO
-         }
-      }
-
-      val p       = NuagesProcs.f.panel
-      val imap    = p.getInputMap( JComponent.WHEN_IN_FOCUSED_WINDOW )
-      val amap    = p.getActionMap
-      val tpName  = "tapes"
-      imap.put( KeyStroke.getKeyStroke( KeyEvent.VK_T, Toolkit.getDefaultToolkit.getMenuShortcutKeyMask ), tpName )
-      amap.put( tpName, new AbstractAction( tpName ) {
-         def actionPerformed( e: ActionEvent ) {
-            val x = (p.getWidth - tapes.getWidth) >> 1
-            val y = (p.getHeight - tapes.getHeight) >> 1
-            p.showOverlayPanel( tapes, new Point( x, y ))
-         }
-      })
-
-      tapes
+   private def initFScape( server: Server, frame: NuagesFrame ) {
+      NuagesFScape.init( server, frame )
+      NuagesFScape.fsc.connect()( succ => println( if( succ ) "FScape connected." else "!ERROR! : FScape not connected" ))
    }
 
    private def shutDown() { // sync.synchronized { }
