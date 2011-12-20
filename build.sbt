@@ -4,14 +4,16 @@ name           := "nuagesapp"
 
 appbundleName  := "NuagesApp"
 
-version        := "0.30-SNAPSHOT"
+version        := "0.30"
 
 organization   := "de.sciss"
 
 scalaVersion   := "2.9.1"
 
+resolvers += "Clojars Repository" at "http://clojars.org/repo"
+
 libraryDependencies ++= Seq(
-   "de.sciss" %% "nuagespompe" % "0.10-SNAPSHOT",
+   "de.sciss" %% "nuagespompe" % "0.10",
    "de.sciss" %% "fscapejobs" % "0.16"
 )
 
