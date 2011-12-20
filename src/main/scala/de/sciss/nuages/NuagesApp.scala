@@ -21,9 +21,6 @@
  *
  *  For further information, please contact Hanns Holger Rutz at
  *  contact@sciss.de
- *
- *
- *  Changelog:
  */
 
 package de.sciss.nuages
@@ -132,7 +129,7 @@ object NuagesApp {
       cfg.fullScreenKey    = true
 
       // server options
-      val o          = cfg.serverOptions
+      val o          = cfg.serverConfig
       val inDevice   = properties.getProperty( PROP_INDEVICE, "" )
       val outDevice  = properties.getProperty( PROP_OUTDEVICE, "" )
       if( inDevice == outDevice ) {

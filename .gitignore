@@ -2,10 +2,8 @@ target/
 lib_managed/
 src_managed/
 project/boot/
-out/
-index.html
-style.css
-_creation/
-.idea/workspace.xml
+.idea/
+.idea_modules/
+NuagesApp.app
 NuagesApp-full.jar
 old_settings
