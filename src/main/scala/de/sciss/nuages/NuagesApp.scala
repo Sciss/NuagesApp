@@ -42,6 +42,9 @@ object NuagesApp {
 
    val DEBUG_PROPERTIES    = false
 
+   val METER_MICS          = true
+//   val METER_REC           = true
+
    private val PROP_BASEPATH           = "basepath"
    private val PROP_INDEVICE           = "indevice"
    private val PROP_OUTDEVICE          = "outdevice"
@@ -136,8 +139,8 @@ object NuagesApp {
       cfg.fullScreenKey    = true
 
       val cSet                = cfg.controlSettings
-//      cSet.numInputChannels   =
-      cSet.numOutputChannels  = MASTER_NUMCHANNELS
+      cSet.numOutputChannels  = MASTER_NUMCHANNELS // + (if( METER_REC ) REC_CHANGROUPS.size else 0)
+      cSet.numInputChannels   = (if( METER_MICS ) MIC_CHANGROUPS.size else 0) + PEOPLE_CHANGROUPS.size
 
       // server options
       val o          = cfg.serverConfig
@@ -155,7 +158,7 @@ object NuagesApp {
 
       o.inputBusChannels   = maxInIdx
       o.outputBusChannels  = maxOutIdx
-      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
+//      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
 
       NuagesLauncher( cfg )   // booom!
    }

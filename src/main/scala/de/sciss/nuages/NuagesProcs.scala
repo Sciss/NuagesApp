@@ -32,6 +32,8 @@ import java.io.File
 import synth.io.AudioFile
 import collection.breakOut
 import collection.immutable.{IndexedSeq => IIdxSeq}
+import de.sciss.osc.Message
+import java.awt.EventQueue
 
 object NuagesProcs {
    sealed trait SettingsLike {
@@ -848,7 +850,10 @@ println( "WARNING: Achilles currently not working ?!" )
                      }
                      val level         = 1
                      val width         = (spread * (outChannels - 2)) + 2
-                     val outSig        = PanAz.ar( outChannels, inSig, pos, level, width, 0 )
+//println( "PanAz : " + outChannels )
+                     // XXX tricky Mix motherfucker -- is that sound processes (?) somewhere checks the
+                     // num channels in a wrong way.
+                     val outSig        = Mix( PanAz.ar( outChannels, inSig, pos, level, width, 0 ))
                      placeChannels( outSig )
                   }
                }
@@ -950,49 +955,59 @@ println( "WARNING: Achilles currently not working ?!" )
          }
       }
 
-//      val dfPostM = SynthDef( "post-master" ) {
-//         val sig = In.ar( masterBus.index, masterBus.numChannels )
-//         // externe recorder
-//         REC_CHANGROUPS.foreach { group =>
-//            val (name, off, numOut) = group
-//            val numIn   = masterBus.numChannels
-//            val sig1: GE = if( numOut == numIn ) {
-//               sig
-//            } else if( numIn == 1 ) {
-//               Seq.fill[ GE ]( numOut )( sig )
-//            } else {
-//               val sigOut = SplayAz.ar( numOut, sig )
-//               Limiter.ar( sigOut, (-0.2).dbamp )
-//            }
-////            assert( sig1.numOutputs == numOut )
-//            Out.ar( off, sig1 )
-//         }
-//         // master + people meters
-//         val meterTr    = Impulse.kr( 20 )
-//         val (peoplePeak, peopleRMS) = {
-//            val res = PEOPLE_CHANGROUPS.map { group =>
-//               val (_, off, numIn)  = group
-//               val pSig       = In.ar( NumOutputBuses.ir + off, numIn )
-//               val peak       = Peak.kr( pSig, meterTr ) // .outputs
-//               val peakM      = Reduce.max( peak )
-//               val rms        = A2K.kr( Lag.ar( pSig.squared, 0.1 ))
-//               val rmsM       = Mix.mono( rms ) / numIn
-//               (peakM, rmsM)
-//            }
-//            (res.map( _._1 ): GE) -> (res.map( _._2 ): GE)  // elegant it's not
-//         }
-//         val masterPeak    = Peak.kr( sig, meterTr )
-//         val masterRMS     = A2K.kr( Lag.ar( sig.squared, 0.1 ))
-//         val peak: GE      = Flatten( Seq( masterPeak, peoplePeak ))
-//         val rms: GE       = Flatten( Seq( masterRMS, peopleRMS ))
-//         val meterData     = Zip( peak, rms )  // XXX correct?
-//         SendReply.kr( meterTr, meterData, "/meters" )
-//      }
-//      synPostM = dfPostM.play( s, addAction = addToTail )
-//            val synPostMID = NuagesProcs.synPostM.id
-//            OSCResponder.add({
-//               case Message( "/meters", `synPostMID`, 0, values @ _* ) =>
-//                  EventQueue.invokeLater( new Runnable { def run() { ctrl.meterUpdate( values.map( _.asInstanceOf[ Float ])( breakOut ))}})
-//            }, s )
+      val dfPostM = SynthDef( "post-master" ) {
+         val masterBus = settings.frame.panel.masterBus.get // XXX ouch
+         val sigMast = In.ar( masterBus.index, masterBus.numChannels )
+         // externe recorder
+         settings.lineOutputs.foreach { cfg =>
+            val off     = cfg.offset
+            val numOut  = cfg.numChannels
+            val numIn   = masterBus.numChannels
+            val sig1: GE = if( numOut == numIn ) {
+               sigMast
+            } else if( numIn == 1 ) {
+               Seq.fill[ GE ]( numOut )( sigMast )
+            } else {
+               val sigOut = SplayAz.ar( numOut, sigMast )
+               Limiter.ar( sigOut, (-0.2).dbamp )
+            }
+//            assert( sig1.numOutputs == numOut )
+            Out.ar( off, sig1 )
+         }
+         // master + people meters
+         if( settings.controlPanel.isDefined ) {
+            val meterTr    = Impulse.kr( 20 )
+            val (peoplePeak, peopleRMS) = {
+               val groups = if( NuagesApp.METER_MICS ) settings.micInputs ++ settings.lineInputs else settings.lineInputs
+               val res = groups.map { cfg =>
+                  val off        = cfg.offset
+                  val numIn      = cfg.numChannels
+                  val pSig       = In.ar( NumOutputBuses.ir + off, numIn )
+                  val peak       = Peak.kr( pSig, meterTr ) // .outputs
+                  val peakM      = Reduce.max( peak )
+                  val rms        = A2K.kr( Lag.ar( pSig.squared, 0.1 ))
+                  val rmsM       = Mix.mono( rms ) / numIn
+                  (peakM, rmsM)
+               }
+               (res.map( _._1 ): GE) -> (res.map( _._2 ): GE)  // elegant it's not
+            }
+            val masterPeak    = Peak.kr( sigMast, meterTr )
+            val masterRMS     = A2K.kr( Lag.ar( sigMast.squared, 0.1 ))
+            val peak: GE      = Flatten( Seq( masterPeak, peoplePeak ))
+            val rms: GE       = Flatten( Seq( masterRMS, peopleRMS ))
+            val meterData     = Zip( peak, rms )  // XXX correct?
+            SendReply.kr( meterTr, meterData, "/meters" )
+         }
+      }
+      val synPostM = dfPostM.play( settings.server, addAction = addToTail )
+      settings.controlPanel.foreach { ctrl =>
+         val synPostMID = synPostM.id
+         osc.Responder.add({
+            case Message( "/meters", `synPostMID`, 0, values @ _* ) =>
+               EventQueue.invokeLater( new Runnable { def run() {
+                  ctrl.meterUpdate( values.map( _.asInstanceOf[ Float ])( breakOut ))
+               }})
+         }, settings.server )
+      }
    }
 }
