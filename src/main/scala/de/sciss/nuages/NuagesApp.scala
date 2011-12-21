@@ -40,6 +40,8 @@ object NuagesApp {
    val NUAGES_ANTIALIAS    = false
 //   var masterBus : AudioBus = null
 
+   val DEBUG_PROPERTIES    = false
+
    private val PROP_BASEPATH           = "basepath"
    private val PROP_INDEVICE           = "indevice"
    private val PROP_OUTDEVICE          = "outdevice"
@@ -78,6 +80,10 @@ object NuagesApp {
          os.close()
       }
       prop
+   }
+
+   if( DEBUG_PROPERTIES ) {
+      properties.list( Console.out )
    }
 
    def decodeGroup( prop: String ) : IIdxSeq[ NamedBusConfig ] = {
@@ -126,7 +132,12 @@ object NuagesApp {
       cfg.tapeAction       = list => procs.foreach( _.tapePath = list.headOption.map( _.file.getAbsolutePath ))
       cfg.doneAction       = booted _
       cfg.tapeFolder       = Some( new File( TAPES_PATH ))
+      cfg.recordPath       = Some( /* new File( */ REC_PATH /* ) */)
       cfg.fullScreenKey    = true
+
+      val cSet                = cfg.controlSettings
+//      cSet.numInputChannels   =
+      cSet.numOutputChannels  = MASTER_NUMCHANNELS
 
       // server options
       val o          = cfg.serverConfig
@@ -144,7 +155,7 @@ object NuagesApp {
 
       o.inputBusChannels   = maxInIdx
       o.outputBusChannels  = maxOutIdx
-//      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
+      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
 
       NuagesLauncher( cfg )   // booom!
    }
