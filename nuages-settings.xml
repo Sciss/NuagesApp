@@ -7,7 +7,7 @@
 <entry key="outdevice">MOTU 828mk2</entry>
 <!-- <entry key="masteroffset">14</entry> -->
 <entry key="masteroffset">0</entry>
-<entry key="masternumchans">4</entry>
+<entry key="masternumchans">2</entry>
 <!-- <entry key="masterchangroups">(t,0,3) (c,3,3) (m,6,2), (q,3,5)</entry> -->
 <!-- <entry key="micoffset">0</entry> -->
 <!-- NOTE: MOTU's ADAT input starts at offset 14 -->
