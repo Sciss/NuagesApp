@@ -13,7 +13,7 @@
 <!-- NOTE: MOTU's ADAT input starts at offset 14 -->
 <entry key="micchangroups">(m_at,14,2) (m_dpa,16,1)</entry>
 <!-- <entry key="micchangroups">(m_at,0,2)</entry> -->
-<entry key="peoplechangroups">(ludger,18,2) (const,20,2)</entry>
+<entry key="peoplechangroups">(ludger,18,1) (const,19,1)</entry>
 <!-- <entry key="peoplechangroups"/> -->
 <entry key="recchangroups"></entry>
 <entry key="solooffset">10</entry>
