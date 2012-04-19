@@ -6,7 +6,7 @@ Due to the inclusion of JNITablet, this currently only works on OS X. Remove the
 
 ### requirements
 
-Builds with xsbt (sbt 0.11) against Scala 2.9.1. Depends on [NuagesPompe](http://github.com/Sciss/NuagesPompe) and [FScapeJobs](http://github.com/Sciss/FScapeJobs). Standard sbt targets are `clean`, `update`, `compile`, `package`, `doc`, `publish-local`, as well as bundling the OS X application with `appbundle`.
+Builds with xsbt (sbt 0.11) against Scala 2.9.2. Depends on [NuagesPompe](http://github.com/Sciss/NuagesPompe) and [FScapeJobs](http://github.com/Sciss/FScapeJobs). Standard sbt targets are `clean`, `update`, `compile`, `package`, `doc`, `publish-local`, as well as bundling the OS X application with `appbundle`.
 
 ### running
 

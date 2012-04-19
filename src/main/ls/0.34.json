@@ -1,0 +1,26 @@
+
+{
+ "organization":"de.sciss",
+ "name":"NuagesApp",
+ "version":"0.34",
+ "description":"Application for improvised electronic music",
+ "site":"https://github.com/Sciss/NuagesApp",
+ "tags":["sound-synthesis","gui","sound","music","supercollider"],
+ "docs":"",
+ "licenses": [{
+   "name": "GPL v2+",
+   "url": "http://www.gnu.org/licenses/gpl-2.0.txt"
+  }],
+ "resolvers": ["http://scala-tools.org/repo-releases"],
+ "dependencies": [{
+   "organization":"de.sciss",
+   "name": "nuagespompe",
+   "version": "0.34"
+  },{
+   "organization":"de.sciss",
+   "name": "fscapejobs",
+   "version": "0.17"
+  }],
+ "scalas": ["2.9.2"],
+ "sbt": false
+}
