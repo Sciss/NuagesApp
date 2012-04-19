@@ -1,4 +1,4 @@
-// import AssemblyKeys._ // put this at the top of the file
+import AssemblyKeys._ // put this at the top of the file
 
 name           := "NuagesApp"
 
@@ -19,8 +19,8 @@ retrieveManaged := true
 
 scalacOptions += "-deprecation"
 
-// seq( assemblySettings: _* )
+seq( assemblySettings: _* )
 
-// test in assembly := {}
+test in assembly := {}
 
 seq( appbundle.settings: _* )

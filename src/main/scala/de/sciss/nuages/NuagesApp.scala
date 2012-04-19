@@ -142,28 +142,17 @@ object NuagesApp {
       cSet.numOutputChannels  = MASTER_NUMCHANNELS // + (if( METER_REC ) REC_CHANGROUPS.size else 0)
       cSet.numInputChannels   = (if( METER_MICS ) MIC_CHANGROUPS.size else 0) + PEOPLE_CHANGROUPS.size
 
-//val fff = new javax.swing.JFrame( "Wait..." )
-//fff.setSize( 100, 100 )
-//fff.setVisible( true )
-//fff.setAlwaysOnTop( true )
-
-      // scala days
-      try {
-//         val p = new File( new File( "" ).getAbsoluteFile.getParentFile, "interpreter.txt" )
-         val p = new File( new File( "" ).getAbsoluteFile, "interpreter.txt" )
-//fff.setTitle( p.getAbsolutePath )
-         val fin = new FileInputStream( p )
+      val replFile = new File( "interpreter.txt" )
+      if( replFile.exists() ) try {
+         val fin = new FileInputStream( replFile )
          val i   = fin.available()
          val arr = new Array[ Byte ]( i )
          fin.read( arr )
          fin.close()
          val txt = new String( arr, "UTF-8" )
          cSet.replSettings.text = txt
-//fff.setTitle( "OK" )
-
       } catch {
          case e =>
-//fff.setTitle( e.getClass.getName )
             e.printStackTrace()
       }
       cSet.replSettings.imports :+= "de.sciss.nuages.{NuagesApp => app}"
