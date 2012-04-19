@@ -26,7 +26,7 @@
 package de.sciss.nuages
 
 import de.sciss.synth._
-import proc.ProcTxn
+import proc.{Proc, ProcTxn}
 
 import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
@@ -142,6 +142,32 @@ object NuagesApp {
       cSet.numOutputChannels  = MASTER_NUMCHANNELS // + (if( METER_REC ) REC_CHANGROUPS.size else 0)
       cSet.numInputChannels   = (if( METER_MICS ) MIC_CHANGROUPS.size else 0) + PEOPLE_CHANGROUPS.size
 
+//val fff = new javax.swing.JFrame( "Wait..." )
+//fff.setSize( 100, 100 )
+//fff.setVisible( true )
+//fff.setAlwaysOnTop( true )
+
+      // scala days
+      try {
+//         val p = new File( new File( "" ).getAbsoluteFile.getParentFile, "interpreter.txt" )
+         val p = new File( new File( "" ).getAbsoluteFile, "interpreter.txt" )
+//fff.setTitle( p.getAbsolutePath )
+         val fin = new FileInputStream( p )
+         val i   = fin.available()
+         val arr = new Array[ Byte ]( i )
+         fin.read( arr )
+         fin.close()
+         val txt = new String( arr, "UTF-8" )
+         cSet.replSettings.text = txt
+//fff.setTitle( "OK" )
+
+      } catch {
+         case e =>
+//fff.setTitle( e.getClass.getName )
+            e.printStackTrace()
+      }
+      cSet.replSettings.imports :+= "de.sciss.nuages.{NuagesApp => app}"
+
       // server options
       val o          = cfg.serverConfig
       val inDevice   = properties.getProperty( PROP_INDEVICE, "" )
@@ -165,6 +191,8 @@ object NuagesApp {
 
    private var procs = Option.empty[ NuagesProcs ] // hmmm... not so nice
 
+   var sum: Proc = _
+
    private def booted( r: NuagesLauncher.Ready ) {
       NuagesFScape.init( r.server, r.frame )
       NuagesFScape.fsc.connect()( succ => println( if( succ ) "FScape connected." else "!ERROR! : FScape not connected" ))
@@ -179,6 +207,8 @@ object NuagesApp {
       procsS.lineOutputs      = REC_CHANGROUPS
       procsS.masterGroups     = MASTER_CHANGROUPS
       val p                   = new NuagesProcs( procsS )
+
+      sum = r.frame.panel.collector.orNull
 
       ProcTxn.spawnAtomic { implicit tx => p.init }
 

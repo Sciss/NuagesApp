@@ -1,0 +1,23 @@
+
+val sf = gen( "sprink" ) {
+   val freq1 = pAudio( "f1", ParamSpec( 1, 100, ExpWarp ), 7 )
+   val freq2 = pAudio( "f2", ParamSpec( 1, 100, ExpWarp ), 17 )
+   val amp   = pAudio( "amp", ParamSpec( 0, 1 ), 0.1 )
+   
+   graph {
+      val b   = LFPulse.ar(0.09, 0, 0.16)
+      val f1  = freq1.ar
+      val f2  = freq2.ar
+      val fmn = f1 min f2
+      val fmx = f1 max f2
+      val m   = b.madd( fmx - fmn, fmn )
+      val p   = LFPulse.ar(m, 0, 0.25)
+      val n   = WhiteNoise.ar( p * amp.ar )
+      BPZ2.ar(Seq(n, n))
+   }
+}
+
+val sp = sf.make
+sp.play
+sp ~> app.sum
+sp.control( "f1" ).v = 100

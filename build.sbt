@@ -1,10 +1,8 @@
-import AssemblyKeys._ // put this at the top of the file
+// import AssemblyKeys._ // put this at the top of the file
 
-name           := "nuagesapp"
+name           := "NuagesApp"
 
-appbundleName  := "NuagesApp"
-
-version        := "0.32-SNAPSHOT"
+version        := "0.34-SNAPSHOT"
 
 organization   := "de.sciss"
 
@@ -13,7 +11,7 @@ scalaVersion   := "2.9.1"
 resolvers += "Clojars Repository" at "http://clojars.org/repo"
 
 libraryDependencies ++= Seq(
-   "de.sciss" %% "nuagespompe" % "0.32-SNAPSHOT",
+   "de.sciss" %% "nuagespompe" % "0.34-SNAPSHOT",
    "de.sciss" %% "fscapejobs" % "0.17"
 )
 
@@ -21,10 +19,8 @@ retrieveManaged := true
 
 scalacOptions += "-deprecation"
 
-seq( assemblySettings: _* )
+// seq( assemblySettings: _* )
 
-test in assembly := {}
+// test in assembly := {}
 
-// jarName in assembly := name + "-full.jar"
-
-seq( appbundleSettings: _* )
+seq( appbundle.settings: _* )
