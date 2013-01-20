@@ -2,7 +2,7 @@ import AssemblyKeys._ // put this at the top of the file
 
 name           := "NuagesApp"
 
-version        := "0.34"
+version        := "0.35.0"
 
 organization   := "de.sciss"
 
@@ -12,24 +12,26 @@ description    := "Application for improvised electronic music"
 
 licenses       := Seq( "GPL v2+" -> url( "http://www.gnu.org/licenses/gpl-2.0.txt" ))
 
-scalaVersion   := "2.9.2"
-
-resolvers += "Clojars Repository" at "http://clojars.org/repo"
+scalaVersion   := "2.10.0"
 
 libraryDependencies ++= Seq(
-   "de.sciss" %% "nuagespompe" % "0.34",
-   "de.sciss" %% "fscapejobs" % "0.17"
+   "de.sciss" %% "nuagespompe" % "0.35.+",
+   "de.sciss" %% "fscapejobs" % "1.2.+"
 )
 
 retrieveManaged := true
 
 scalacOptions += "-deprecation"
 
+// ---- packaging ----
+
 seq( assemblySettings: _* )
 
 test in assembly := {}
 
 seq( appbundle.settings: _* )
+
+appbundle.target <<= baseDirectory
 
 // ---- publishing ----
 

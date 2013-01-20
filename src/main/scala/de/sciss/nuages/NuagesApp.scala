@@ -2,7 +2,7 @@
  *  NuagesApp.scala
  *  (NuagesApp)
  *
- *  Copyright (c) 2010-2012 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2010-2013 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -32,6 +32,7 @@ import java.util.Properties
 import java.io.{FileOutputStream, FileInputStream, File}
 import collection.breakOut
 import collection.immutable.{IndexedSeq => IIdxSeq}
+import util.control.NonFatal
 
 object NuagesApp {
    def main( args: Array[ String ]) { launch() }
@@ -98,7 +99,7 @@ object NuagesApp {
             val Array( name, offS, chansS ) = s0.substring( 1, s0.length - 1 ).split( ',' )
             NamedBusConfig( name, offS.toInt, chansS.toInt )
          })( breakOut )
-      } catch { case e =>
+      } catch { case NonFatal( e ) =>
          println( "Error matching value '" + s + "' for prop '" + prop + "' : " )
          e.printStackTrace()
          IIdxSeq.empty
@@ -152,7 +153,7 @@ object NuagesApp {
          val txt = new String( arr, "UTF-8" )
          cSet.replSettings.text = txt
       } catch {
-         case e =>
+         case NonFatal( e ) =>
             e.printStackTrace()
       }
       cSet.replSettings.imports :+= "de.sciss.nuages.{NuagesApp => app}"

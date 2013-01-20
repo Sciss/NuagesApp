@@ -1,12 +1,12 @@
 ## README
 
-An application which glues together Wolkenpumpe for live improvisation. (C)opyright 2010&ndash;2012 by Hanns Holger Rutz. All rights reserved. Covered by the GNU General Public License v2+ (see licenses folder).
+An application which glues together Wolkenpumpe for live improvisation. (C)opyright 2010&ndash;2013 by Hanns Holger Rutz. All rights reserved. Covered by the GNU General Public License v2+ (see licenses folder).
 
 Due to the inclusion of JNITablet, this currently only works on OS X. Remove the tablet initialization on other platforms.
 
 ### requirements
 
-Builds with xsbt (sbt 0.11) against Scala 2.9.2. Depends on [NuagesPompe](http://github.com/Sciss/NuagesPompe) and [FScapeJobs](http://github.com/Sciss/FScapeJobs). Standard sbt targets are `clean`, `update`, `compile`, `package`, `doc`, `publish-local`, as well as bundling the OS X application with `appbundle`.
+Builds with sbt 0.12.1 against Scala 2.10.0. Depends on [NuagesPompe](http://github.com/Sciss/NuagesPompe) and [FScapeJobs](http://github.com/Sciss/FScapeJobs). Standard sbt targets are `clean`, `update`, `compile`, `package`, `doc`, `publish-local`, as well as bundling the OS X application with `appbundle`.
 
 ### running
 

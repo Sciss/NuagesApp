@@ -4,6 +4,6 @@ src_managed/
 project/boot/
 .idea/
 .idea_modules/
-NuagesApp.app
+*.app
 NuagesApp-full.jar
 old_settings

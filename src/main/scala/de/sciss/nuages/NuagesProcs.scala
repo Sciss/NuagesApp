@@ -2,7 +2,7 @@
  *  NuagesProcs.scala
  *  (NuagesApp)
  *
- *  Copyright (c) 2010-2012 Hanns Holger Rutz. All rights reserved.
+ *  Copyright (c) 2010-2013 Hanns Holger Rutz. All rights reserved.
  *
  *  This software is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -1004,12 +1004,12 @@ println( "WARNING: Achilles currently not working ?!" )
       val synPostM = dfPostM.play( settings.server, addAction = addToTail )
       settings.controlPanel.foreach { ctrl =>
          val synPostMID = synPostM.id
-         osc.Responder.add({
+         osc.Responder.add( settings.server ) {
             case Message( "/meters", `synPostMID`, 0, values @ _* ) =>
                EventQueue.invokeLater( new Runnable { def run() {
                   ctrl.meterUpdate( values.map( _.asInstanceOf[ Float ])( breakOut ))
                }})
-         }, settings.server )
+         }
       }
    }
 }

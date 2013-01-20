@@ -4,6 +4,7 @@ import java.io.File
 import collection.immutable.{IndexedSeq => IIdxSeq}
 import de.sciss.synth.io.{AudioFile, AudioFileSpec}
 import sys.process.Process
+import util.control.NonFatal
 
 object SuperJam extends App {
    args.toSeq match {
@@ -29,7 +30,7 @@ object SuperJam extends App {
                println( "Failed (" + res + ") for " + f.getCanonicalPath )
             }
          } catch {
-            case e =>
+            case NonFatal( e ) =>
                println( "Failed (" + e.getClass.getName + ") for " + f.getCanonicalPath )
          }
       }
@@ -46,7 +47,7 @@ object SuperJam extends App {
                val spec = AudioFile.readSpec( f )
                if( filter( spec )) b += f
             } catch {
-               case _ =>
+               case NonFatal( _ ) => // ignore
             }
          i += 1 }
       }
