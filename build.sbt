@@ -33,6 +33,8 @@ seq( appbundle.settings: _* )
 
 appbundle.target <<= baseDirectory
 
+appbundle.icon := Some( file( "application.icns" ))
+
 // ---- publishing ----
 
 publishMavenStyle := true
