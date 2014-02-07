@@ -80,9 +80,16 @@ object NuagesApp {
       prop.setProperty(PROP_SOLONUMCHANS, 2.toString)
       prop.setProperty(PROP_RECCHANGROUPS, "")
       prop.setProperty(PROP_PEOPLECHANGROUPS, "")
-      val os = new FileOutputStream(file)
-      prop.storeToXML(os, "Nuages Settings")
-      os.close()
+      try {
+        val os = new FileOutputStream(file)
+        try {
+          prop.storeToXML(os, "Nuages Settings")
+        } finally {
+          os.close()
+        }
+      } catch {
+        case NonFatal(e) => e.printStackTrace()
+      }
     }
     prop
   }
