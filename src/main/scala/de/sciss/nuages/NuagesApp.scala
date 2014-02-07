@@ -168,7 +168,7 @@ object NuagesApp {
     } else {
       o.deviceNames = Some(inDevice -> outDevice)
     }
-    val maxInIdx = (MIC_CHANGROUPS ++ PEOPLE_CHANGROUPS).map(_.stopOffset).max
+    val maxInIdx = ((MIC_CHANGROUPS ++ PEOPLE_CHANGROUPS).map(_.stopOffset) :+ 0).max
 
     val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) +: (if (SOLO_OFFSET >= 0) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) +:
       REC_CHANGROUPS.map(_.stopOffset)).max

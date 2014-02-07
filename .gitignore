@@ -5,5 +5,7 @@ project/boot/
 .idea/
 .idea_modules/
 *.app
-NuagesApp-full.jar
+Wolkenpumpe.jar
 old_settings
+nuages-settings.xml
+
