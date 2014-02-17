@@ -231,7 +231,7 @@ object NuagesApp {
     if (USE_TABLET) try {
       NuagesTablet.init(r.frame)
     } catch {
-      case NonFatal(e) =>
+      case _: Throwable =>
         println("ERROR: Could not initialize tablet.")
         // e.printStackTrace()
     }

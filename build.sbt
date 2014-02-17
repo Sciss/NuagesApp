@@ -4,7 +4,7 @@ name           := "NuagesApp"
 
 lazy val appName = "Wolkenpumpe"
 
-version        := "1.0.1"
+version        := "1.0.2"
 
 organization   := "de.sciss"
 
