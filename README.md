@@ -16,13 +16,14 @@ You'll need to edit the `NuagesProc` file to add your own sound modules. The REP
 
 ## settings
 
-Upon start, the application reads the configuration file `nuages-settings.xml` in the root directory if found. If not found, the default settings are created and written to this file, so you can edit it and re-run the application. The file format is XML for standard Java properties. The entry key value pairs are as follows:
+Upon start, the application reads the configuration file `nuages-settings.xml` in the root directory if found. If not found, the default settings are created and written to this file, so you can edit it and re-run the application. If the file cannot be written to the cwd location, it will be written to the user's home directory instead. The file format is XML for standard Java properties. The entry key value pairs are as follows:
 
 |**key**           |**value type**         |**description**                          |**default**         |
 |------------------|-----------------------|-----------------------------------------|--------------------|
 |`basepath`        |path string            |Path to the files used in the session.   |`~/Desktop/Nuages`  |
-|`indevice`        |string                 |Name of audio interface to use for input |(defaut sound card) |
-|`outdevice`       |string                 |Name of audio interface to use for output|(defaut sound card) |
+|`scsynth`         |path string            |Path to SuperCollider (scsynth).         |(uses `SC_HOME`)    |
+|`indevice`        |string                 |Name of audio interface to use for input |(default sound card)|
+|`outdevice`       |string                 |Name of audio interface to use for output|(default sound card)|
 |`masternumchans`  |integer number         |Number of audio output channels          |`2`                 |
 |`masteroffset`    |integer number         |Offset for output channels               |`0`                 |
 |`masterchangroups`|space separated tuples `(<name>,<off>,<num>)` |Creates output channel groups with a given name, integer offset and number of channels|none|
@@ -38,6 +39,14 @@ Wolkenpumpe expects or creates the following sub-directories inside the `basepat
 - `tape` contains all the sound files you want to use. The folder will be scanned upon application launch. Tapes can be selected by opening the tape window with `Cmd-T`. When playing a tape process, the currently selected entry in this table will be used.
 - `rec` will be used to store recordings made during the session
 - `sciss` will be used or temporary buffers for exchange with FScape
+
+## trouble-shooting
+
+If the program fails to start, the most likely cause is that the SuperCollider server is not found. Check `nuages-settings.xml` (this file will be written to the program's own directory or to your home directory if not found). In the entry
+
+    <entry key="scsynth">SC_HOME</entry>
+
+replace `SC_HOME` with the correct and full path to `scsynth` (`scsynth.exe` on Windows).
 
 ## mouse control
 

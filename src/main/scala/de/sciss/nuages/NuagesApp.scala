@@ -29,7 +29,7 @@ import de.sciss.synth._
 import proc.{Proc, ProcTxn}
 
 import java.util.Properties
-import java.io.{FileOutputStream, FileInputStream, File}
+import java.io.{IOException, FileOutputStream, FileInputStream, File}
 import collection.breakOut
 import collection.immutable.{IndexedSeq => Vec}
 import util.control.NonFatal
@@ -47,6 +47,7 @@ object NuagesApp {
   val METER_MICS          = true
   //   val METER_REC           = true
 
+  private val PROP_SCSYNTH            = "scsynth"
   private val PROP_BASEPATH           = "basepath"
   private val PROP_INDEVICE           = "indevice"
   private val PROP_OUTDEVICE          = "outdevice"
@@ -60,16 +61,23 @@ object NuagesApp {
   private val PROP_MICCHANGROUPS      = "micchangroups"
   private val PROP_COLLECTOR          = "collector"
 
+  private val propertyFileName        = "nuages-settings.xml"
+
+  private val DEFAULT_SCSYNTH         = "SC_HOME"
+
   val properties = {
-    val file = new File("nuages-settings.xml")
-    val prop = new Properties()
-    if (file.isFile) {
-      val is = new FileInputStream(file)
+    val file0 = new File(propertyFileName)
+    val file1 = new File(sys.props("user.home"), propertyFileName)
+    val prop  = new Properties()
+    if (file0.isFile || file1.isFile) {
+      val file  = if (file0.isFile) file0 else file1
+      val is    = new FileInputStream(file)
       prop.loadFromXML(is)
       is.close()
     } else {
       prop.setProperty(PROP_BASEPATH,
         new File(new File(System.getProperty("user.home"), "Desktop"), "Nuages").getAbsolutePath)
+      prop.setProperty(PROP_SCSYNTH, DEFAULT_SCSYNTH)
       prop.setProperty(PROP_INDEVICE, "")
       prop.setProperty(PROP_OUTDEVICE, "")
       prop.setProperty(PROP_MASTERNUMCHANS, 2.toString)
@@ -81,12 +89,17 @@ object NuagesApp {
       prop.setProperty(PROP_RECCHANGROUPS, "")
       prop.setProperty(PROP_PEOPLECHANGROUPS, "")
       try {
-        val os = new FileOutputStream(file)
+        val os = try {
+          new FileOutputStream(file0)
+        } catch {
+          case _: IOException => new FileOutputStream(file1)
+        }
         try {
           prop.storeToXML(os, "Nuages Settings")
         } finally {
           os.close()
         }
+
       } catch {
         case NonFatal(e) => e.printStackTrace()
       }
@@ -167,14 +180,17 @@ object NuagesApp {
     cSet.replSettings.imports :+= "de.sciss.nuages.{NuagesApp => app}"
 
     // server options
-    val o = cfg.serverConfig
-    val inDevice = properties.getProperty(PROP_INDEVICE, "")
+    val o         = cfg.serverConfig
+    val inDevice  = properties.getProperty(PROP_INDEVICE, "")
     val outDevice = properties.getProperty(PROP_OUTDEVICE, "")
     if (inDevice == outDevice) {
       if (inDevice != "") o.deviceName = Some(inDevice)
     } else {
       o.deviceNames = Some(inDevice -> outDevice)
     }
+    val scsynth = properties.getProperty(PROP_SCSYNTH, DEFAULT_SCSYNTH)
+    if (scsynth != DEFAULT_SCSYNTH) o.programPath = scsynth
+
     val maxInIdx = ((MIC_CHANGROUPS ++ PEOPLE_CHANGROUPS).map(_.stopOffset) :+ 0).max
 
     val maxOutIdx = ((MASTER_OFFSET + MASTER_NUMCHANNELS) +: (if (SOLO_OFFSET >= 0) SOLO_OFFSET + SOLO_NUMCHANNELS else 0) +:
@@ -215,7 +231,9 @@ object NuagesApp {
     if (USE_TABLET) try {
       NuagesTablet.init(r.frame)
     } catch {
-      case NonFatal(e) => e.printStackTrace()
+      case NonFatal(e) =>
+        println("ERROR: Could not initialize tablet.")
+        // e.printStackTrace()
     }
 
     procs = Some(p)
