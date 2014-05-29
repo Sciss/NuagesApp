@@ -31,7 +31,7 @@ import de.sciss.synth
 import java.io.File
 import synth.io.AudioFile
 import collection.breakOut
-import collection.immutable.{IndexedSeq => IIdxSeq}
+import collection.immutable.{IndexedSeq => Vec}
 import de.sciss.osc.Message
 import java.awt.EventQueue
 
@@ -49,10 +49,10 @@ object NuagesProcs {
       def loopDuration : Double
       def audioFilesFolder : Option[ File ]
 
-      def lineInputs   : IIdxSeq[ NamedBusConfig ]
-      def micInputs    : IIdxSeq[ NamedBusConfig ]
-      def lineOutputs  : IIdxSeq[ NamedBusConfig ]
-      def masterGroups : IIdxSeq[ NamedBusConfig ]
+      def lineInputs   : Vec[ NamedBusConfig ]
+      def micInputs    : Vec[ NamedBusConfig ]
+      def lineOutputs  : Vec[ NamedBusConfig ]
+      def masterGroups : Vec[ NamedBusConfig ]
    }
 
    object Settings {
@@ -77,10 +77,10 @@ object NuagesProcs {
 
       var audioFilesFolder : Option[ File ] = None
 
-      var lineInputs   : IIdxSeq[ NamedBusConfig ] = IIdxSeq.empty
-      var micInputs    : IIdxSeq[ NamedBusConfig ] = IIdxSeq.empty
-      var lineOutputs  : IIdxSeq[ NamedBusConfig ] = IIdxSeq.empty
-      var masterGroups : IIdxSeq[ NamedBusConfig ] = IIdxSeq.empty
+      var lineInputs   : Vec[ NamedBusConfig ] = Vec.empty
+      var micInputs    : Vec[ NamedBusConfig ] = Vec.empty
+      var lineOutputs  : Vec[ NamedBusConfig ] = Vec.empty
+      var masterGroups : Vec[ NamedBusConfig ] = Vec.empty
 
       def build : Settings = SettingsImpl( server, frame, controlPanel, numLoops, loopDuration, audioFilesFolder,
          lineInputs, micInputs, lineOutputs, masterGroups )
@@ -89,8 +89,8 @@ object NuagesProcs {
    private case class SettingsImpl( server: Server, frame: NuagesFrame, controlPanel: Option[ ControlPanel ],
                                     numLoops: Int, loopDuration: Double,
                                     audioFilesFolder: Option[ File ],
-                                    lineInputs: IIdxSeq[ NamedBusConfig ], micInputs: IIdxSeq[ NamedBusConfig ],
-                                    lineOutputs: IIdxSeq[ NamedBusConfig ], masterGroups: IIdxSeq[ NamedBusConfig ])
+                                    lineInputs: Vec[ NamedBusConfig ], micInputs: Vec[ NamedBusConfig ],
+                                    lineOutputs: Vec[ NamedBusConfig ], masterGroups: Vec[ NamedBusConfig ])
    extends Settings
 }
 

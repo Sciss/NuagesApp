@@ -33,8 +33,17 @@ import java.io.{IOException, FileOutputStream, FileInputStream, File}
 import collection.breakOut
 import collection.immutable.{IndexedSeq => Vec}
 import util.control.NonFatal
+import java.awt.event.{MouseEvent, MouseAdapter, KeyAdapter, KeyEvent}
 
 object NuagesApp {
+  private val osName: String = sys.props("os.name")
+
+  /** `true` when running the application on a Linux system. */
+  val isLinux  : Boolean = osName.contains("Linux")
+  /** `true` when running the application on a Mac (OS X) system. */
+  val isMac    : Boolean = osName.contains("Mac")
+  /** `true` when running the application on a Windows system. */
+  val isWindows: Boolean = osName.contains("Windows")
 
   def main(args: Array[String]): Unit = launch()
 
@@ -141,22 +150,22 @@ object NuagesApp {
   val PEOPLE_CHANGROUPS   = decodeGroup( PROP_PEOPLECHANGROUPS )
   val USE_COLLECTOR       = properties.getProperty( PROP_COLLECTOR, false.toString ).toBoolean
 
-   val USE_TABLET          = true
+   val USE_TABLET          = isMac
    val DEBUG_PROXIMITY     = false
    val LOOP_DUR            = 30
 
   def launch() {
     val cfg = NuagesLauncher.SettingsBuilder()
     cfg.masterChannels = Some(MASTER_OFFSET until (MASTER_OFFSET + MASTER_NUMCHANNELS))
-    cfg.soloChannels = if ( /* !INTERNAL_AUDIO && */ (SOLO_OFFSET >= 0)) {
-      Some((SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS)))
+    cfg.soloChannels = if ( /* !INTERNAL_AUDIO && */ SOLO_OFFSET >= 0) {
+      Some(SOLO_OFFSET until (SOLO_OFFSET + SOLO_NUMCHANNELS))
     } else {
       None
     }
     cfg.collector        = USE_COLLECTOR
     cfg.antiAliasing     = NUAGES_ANTIALIAS
     cfg.tapeAction       = list => procs.foreach( _.tapePath = list.headOption.map( _.file.getAbsolutePath ))
-    cfg.doneAction       = booted _
+    cfg.doneAction       = booted
     cfg.tapeFolder       = Some(new File(TAPES_PATH))
     cfg.recordPath       = Some(/* new File( */ REC_PATH /* ) */)
     cfg.fullScreenKey    = true
@@ -200,16 +209,18 @@ object NuagesApp {
     o.outputBusChannels = maxOutIdx
     //      println( "MAX IN " + maxInIdx + " ; MAX OUT " + maxOutIdx )
 
-    NuagesLauncher(cfg) // booom!
+    NuagesLauncher(cfg) // boom!
   }
 
-  private var procs = Option.empty[NuagesProcs] // hmmm... not so nice
+  private var procs = Option.empty[NuagesProcs] // ...not so nice
 
   var sum: Proc = _
 
-  private def booted(r: NuagesLauncher.Ready) {
+  private def booted(r: NuagesLauncher.Ready): Unit = {
     NuagesFScape.init(r.server, r.frame)
     NuagesFScape.fsc.connect()(succ => println(if (succ) "FScape connected." else "!ERROR! : FScape not connected"))
+
+    initTabletSurrogate(r)
 
     val procsS              = NuagesProcs.SettingsBuilder()
     procsS.server           = r.server
@@ -237,5 +248,50 @@ object NuagesApp {
     }
 
     procs = Some(p)
+  }
+
+  private def initTabletSurrogate(r: NuagesLauncher.Ready): Unit = {
+    //    val p     = r.frame.panel
+    //    val iMap  = p.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+    //    val aMap  = p.getActionMap
+    //
+    //    val actionTest = new Action("test") {
+    //      // accelerator = Some(KeyStroke.getKeyStroke(KeyEvent.VK_1, 0))
+    //      def apply(): Unit = {
+    //
+    //      }
+    //    }
+    //    iMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_1, 0), "de.sciss.nuages.Test")
+    //    aMap.put("de.sciss.nuages.Test", actionTest.peer)
+
+    val frame = r.frame
+    val trans = frame.transition
+    val panel = frame.panel.display
+    panel.addMouseListener(new MouseAdapter {
+      override def mousePressed(e: MouseEvent): Unit = {
+        // println("Pressed")
+        panel.requestFocus()
+      }
+    })
+    panel.addKeyListener(new KeyAdapter {
+      override def keyPressed(e: KeyEvent): Unit = {
+        val code = e.getKeyCode
+        // println(code)
+        if (code >= KeyEvent.VK_0 && code <= KeyEvent.VK_9) {
+          val a0  = code - KeyEvent.VK_0
+          val a1  = if (a0 == 0) 10 else a0
+          val amt = a1 / 10.0
+          val tpe = if (e.isShiftDown) 1 else 2   // shift = glide, other = xfade
+          trans.setTransition(tpe, amt)
+        }
+      }
+
+      override def keyReleased(e: KeyEvent): Unit = {
+        val code = e.getKeyCode
+        if (code >= KeyEvent.VK_0 && code <= KeyEvent.VK_9) {
+          trans.setTransition(0, 0.0)
+        }
+      }
+    })
   }
 }

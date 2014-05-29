@@ -4,7 +4,7 @@ name           := "NuagesApp"
 
 lazy val appName = "Wolkenpumpe"
 
-version        := "1.0.2"
+version        := "1.0.3-SNAPSHOT"
 
 organization   := "de.sciss"
 
@@ -14,12 +14,14 @@ description    := "Application for improvised electronic music"
 
 licenses       := Seq("GPL v2+" -> url("http://www.gnu.org/licenses/gpl-2.0.txt"))
 
-scalaVersion   := "2.10.3"
+scalaVersion   := "2.10.4"
 
 libraryDependencies ++= Seq(
-   "de.sciss" %% "nuagespompe" % "0.35.+",
-   "de.sciss" %% "fscapejobs"  % "1.2.+"
+  "de.sciss" %% "nuagespompe" % "0.35.0",
+  "de.sciss" %% "fscapejobs"  % "1.2.0"
 )
+
+libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
 
 mainClass       := Some("de.sciss.nuages.NuagesApp")
 
