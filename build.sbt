@@ -18,7 +18,7 @@ scalaVersion   := "2.10.4"
 
 libraryDependencies ++= Seq(
   "de.sciss" %% "nuagespompe" % "0.35.0",
-  "de.sciss" %% "fscapejobs"  % "1.2.0"
+  "de.sciss" %% "fscapejobs"  % "1.4.1" // "1.2.0"
 )
 
 libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVersion.value
